@@ -4,192 +4,124 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>A1VIP KORA CODE</title>
-  <style>
-    :root{
-      --bg:#020b08;--bg2:#05140f;--green:#09f26c;--green2:#00c95a;--gold:#f4b400;--gold2:#ffd54a;--text:#f7f7f7;--muted:#a9afa9;--card:#071410;--border:rgba(18,255,136,.22);
-    }
-    *{box-sizing:border-box} html{scroll-behavior:smooth}
-    body{margin:0;font-family:Tahoma,Arial,sans-serif;background:radial-gradient(circle at 50% 20%,#0f261d 0,#06110d 25%,#020906 65%,#010403 100%);color:var(--text)}
-    a{text-decoration:none;color:inherit}
-    .wrap{max-width:760px;margin:0 auto;padding-bottom:40px}
-    .topbar{background:repeating-linear-gradient(-45deg,#d89800,#d89800 14px,#e3a60e 14px,#e3a60e 28px);color:#111;padding:14px 14px 18px;text-align:center;font-weight:800;line-height:1.5;box-shadow:0 2px 0 rgba(0,0,0,.35)}
-    .top-actions{display:flex;gap:10px;justify-content:center;align-items:center;margin-top:10px;flex-wrap:wrap}
-    .pill{background:#111;color:#f7d24d;border-radius:10px;padding:10px 18px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;min-width:120px;box-shadow:0 0 18px rgba(255,196,0,.22)}
-    .header{position:sticky;top:0;z-index:40;background:rgba(2,10,8,.95);backdrop-filter:blur(6px);border-bottom:1px solid rgba(9,242,108,.15)}
-    .nav{max-width:760px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:18px 18px}
-    .menu-btn{font-size:34px;color:#cfd3d0;background:none;border:none;cursor:pointer}
-    .logo{display:flex;align-items:center;gap:10px;font-weight:900}
-    .logo-ball{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle,#49ff95 0,#08df5d 55%,#0a381e 100%);box-shadow:0 0 22px rgba(9,242,108,.45)}
-    .logo-text{line-height:1}.logo-text .w{font-size:22px;font-weight:900}.logo-text .g{color:#11f06a}.logo-text .y{color:#f8c632}.logo-text small{display:block;font-size:12px;letter-spacing:1px}
-    .drawer{position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:.25s;z-index:50}
-    .drawer.open{opacity:1;pointer-events:auto}
-    .panel{position:absolute;right:0;top:0;bottom:0;width:min(85vw,340px);background:#020906;border-left:1px solid rgba(9,242,108,.18);transform:translateX(100%);transition:.25s;padding:22px 16px}
-    .drawer.open .panel{transform:none}
-    .close{font-size:42px;color:#bac0bc;background:none;border:none;display:block;margin-bottom:14px}
-    .navlink{display:block;padding:16px 18px;margin:12px 0;border:1px solid rgba(9,242,108,.18);border-radius:18px;background:linear-gradient(90deg,rgba(8,32,23,.7),rgba(6,16,12,.85));font-weight:800}
-    .navlink.gold{background:linear-gradient(180deg,#f1bb08,#e1a500);color:#111;border-color:#f6c839}
-    .hero{margin:28px 16px;padding:28px 18px;border-radius:34px;background:radial-gradient(circle at 50% 35%,rgba(15,255,128,.12),transparent 38%),linear-gradient(180deg,#0a2018,#050907 85%);border:1px solid var(--border);box-shadow:0 0 40px rgba(9,242,108,.12), inset 0 0 70px rgba(245,188,18,.06)}
-    .hero-badge{margin:0 auto 24px;display:inline-flex;align-items:center;gap:10px;padding:14px 20px;border-radius:999px;background:linear-gradient(180deg,#0d5a34,#0a3924);border:1px solid rgba(9,242,108,.3);font-weight:900;color:#67ffa8;box-shadow:0 0 24px rgba(9,242,108,.15)}
-    h1,h2,h3,p{margin:0}
-    .hero-title{font-size:clamp(44px,9vw,72px);line-height:1.12;text-align:center;margin-bottom:14px;font-weight:900}
-    .hero-title .mel{color:var(--gold);display:block;text-shadow:0 0 18px rgba(255,202,44,.3)}
-    .promo{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin:22px 0}
-    .promo-code{background:linear-gradient(180deg,#ffd018,#f1b406);color:#111;padding:12px 26px;border-radius:20px;font-size:30px;font-weight:900;box-shadow:0 0 24px rgba(255,194,0,.3)}
-    .hero-sub{font-size:clamp(20px,5vw,33px);text-align:center;line-height:1.7;color:#f4f4f4}
-    .hero-desc{margin:18px auto 0;max-width:620px;color:#b9c2ba;font-size:clamp(18px,4vw,22px);line-height:1.9;text-align:center}.hero-desc b{color:#ffd02f}
-    .cta{display:block;margin:28px auto 0;padding:18px 20px;border-radius:24px;text-align:center;font-size:clamp(24px,5vw,36px);font-weight:900}.cta.gold{background:linear-gradient(180deg,#f8c000,#e7ab00);color:#111;box-shadow:0 0 30px rgba(255,191,0,.25)}
-    .cta.green{margin-top:18px;background:linear-gradient(180deg,#0c6d42,#0b3f29);border:1px solid rgba(9,242,108,.28);color:#d8ffe8}
-    .section{padding:10px 16px 0}.sec-title{text-align:center;font-size:clamp(28px,7vw,52px);font-weight:900;line-height:1.4;color:#fff;text-shadow:0 0 24px rgba(9,242,108,.22);margin:14px 0 8px}.sec-title .green{color:#11f06a}.sec-sub{text-align:center;color:#97a399;font-size:24px;margin-bottom:20px}.divider{height:1px;background:linear-gradient(90deg,transparent,rgba(9,242,108,.35),transparent);margin:18px 0 24px}
-    .stats-card,.message-card,.proof-title{border-radius:32px;background:radial-gradient(circle at 50% 10%,rgba(9,242,108,.08),transparent 30%),linear-gradient(180deg,#0a1813,#050907);border:1px solid rgba(9,242,108,.2);box-shadow:0 0 36px rgba(9,242,108,.09), inset 0 0 60px rgba(255,187,0,.05)}
-    .stats-card{padding:26px 18px;margin-bottom:28px}.stats-label{font-size:clamp(24px,5vw,34px);text-align:center;color:#1bf37d;font-weight:900}.stats-big{font-size:clamp(28px,5.5vw,44px);text-align:center;line-height:1.8;font-weight:900;margin-top:10px}.stats-big .gold{color:#ffca28}.stats-profit{font-size:clamp(56px,10vw,84px);text-align:center;color:#08f06b;font-weight:900;line-height:1.1;margin-top:12px}.stats-small{text-align:center;color:#15d86a;font-size:clamp(22px,4vw,28px);font-weight:700}
-    .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:560px;margin:24px auto 0}.stat-box{background:#060807;border:1px solid rgba(9,242,108,.18);border-radius:26px;padding:24px 12px;text-align:center;min-height:138px;display:flex;flex-direction:column;justify-content:center}.stat-box.wide{grid-column:1/-1;max-width:260px;margin:0 auto;border-color:rgba(255,177,0,.28)}.stat-value{font-size:clamp(44px,7vw,70px);font-weight:900;color:#0df06d}.stat-value.gold{color:#ffc61a}.stat-label{margin-top:8px;color:#9ea8a0;font-size:clamp(18px,4vw,26px)}
-    .cards{display:flex;flex-direction:column;gap:28px}.card{position:relative;border-radius:32px;background:linear-gradient(180deg,#04110c,#030705);border:1px solid rgba(9,242,108,.18);box-shadow:0 0 32px rgba(9,242,108,.08);padding:26px 14px 18px}.index-badge{position:absolute;left:14px;top:14px;width:54px;height:54px;border-radius:16px;border:3px solid #08f06b;color:#08f06b;display:grid;place-items:center;font-size:28px;font-weight:900}.status-badge{position:absolute;right:14px;top:14px;background:linear-gradient(180deg,#0ad95b,#08973f);color:#fff;border-radius:999px;padding:10px 16px;font-weight:900;font-size:24px}
-    .code-box{margin:46px 16px 18px;background:#07090a;border:1px solid rgba(9,242,108,.18);border-radius:24px;padding:22px 12px;text-align:center;font-size:clamp(34px,7vw,58px);font-weight:900;letter-spacing:10px;color:#09f26c}
-    .meta{display:grid;grid-template-columns:1fr 1fr;align-items:end;gap:12px;margin:0 10px 16px}.odds{font-size:clamp(32px,6vw,48px);font-weight:900;color:#f6c11b;text-align:left}.meta small{display:block;color:#98a499;font-size:18px;margin-top:6px}.proof-label{text-align:right;font-size:20px;color:#adb5ad;margin:0 10px 12px}.shot{display:block;width:100%;border-radius:22px;border:1px solid rgba(255,255,255,.08);background:#f5f5f5;overflow:hidden}.shot img{width:100%;display:block;object-fit:cover;background:#fff}.details{margin:18px 10px 0;border-radius:24px;background:linear-gradient(180deg,#0a1813,#070a08);border:1px solid rgba(9,242,108,.16);padding:18px 16px}.date-row{display:flex;justify-content:space-between;gap:10px;color:#b8beb9;font-size:20px;margin-bottom:16px}.tag{display:inline-block;background:linear-gradient(180deg,#0b6c42,#0a4029);color:#9afcc1;border:1px solid rgba(9,242,108,.2);border-radius:16px;padding:10px 16px;font-weight:900;font-size:18px}
-    .info-box{margin-top:16px;border-radius:22px;background:linear-gradient(180deg,#09120f,#050807);border:1px solid rgba(9,242,108,.14);padding:18px 16px;color:#f0f3f0;font-size:clamp(20px,4vw,26px);line-height:1.9;text-align:center}.info-box .green{color:#14ef6e;font-weight:900}.info-box .gold{color:#ffcb2a;font-weight:900}.info-cta{display:block;margin-top:14px;background:linear-gradient(180deg,#f5bb05,#e2a600);color:#111;font-weight:900;border-radius:18px;padding:16px}.info-cta.alt{background:linear-gradient(180deg,#0d6e43,#0b432c);color:#dffff0}
-    .copy-btn,.play-btn{display:block;width:100%;border:none;border-radius:22px;padding:20px 16px;font-size:clamp(24px,5vw,34px);font-weight:900;cursor:pointer;margin-top:18px}.copy-btn{background:linear-gradient(180deg,#08eb5c,#05c34d);color:#032d15}.play-btn{background:linear-gradient(180deg,#4f3904,#1d1503);border:1px solid rgba(248,190,14,.25);color:#f0be22}
-    .empty{padding:28px 18px;text-align:center;color:#98a298;background:linear-gradient(180deg,#07120d,#040706);border-radius:26px;border:1px dashed rgba(9,242,108,.22)}
-    .message-card{padding:28px 18px;margin:30px 0}.message-card.gold{border-color:rgba(255,192,0,.22);box-shadow:0 0 34px rgba(255,191,0,.1), inset 0 0 60px rgba(255,191,0,.08)}.message-title{text-align:center;font-size:clamp(34px,7vw,54px);font-weight:900;line-height:1.6}.message-title .gold{color:#ffc81f}.message-text{margin-top:14px;text-align:center;color:#c3c7c3;font-size:clamp(20px,4vw,30px);line-height:1.9}.footer{padding:28px 16px 40px;text-align:center}.rights{font-size:22px;color:#d5d9d5;font-weight:800}.telegram{margin:16px auto 0;display:inline-flex;align-items:center;gap:10px;padding:14px 20px;border-radius:999px;background:linear-gradient(180deg,#188fef,#1164b0);color:#fff;font-size:22px;font-weight:800;box-shadow:0 0 22px rgba(24,143,239,.25)}
-    @media (max-width:600px){.sec-sub{font-size:18px}.logo-text .w{font-size:18px}.logo-ball{width:46px;height:46px}.stats-grid{gap:12px}.stat-box{min-height:120px;padding:18px 10px}.meta{grid-template-columns:1fr 1fr}.hero{margin:24px 12px;padding:24px 14px}.card{padding:22px 10px 16px}.code-box{letter-spacing:6px}}
-  </style>
+  <meta name="theme-color" content="#030a08" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;800;900&family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
 </head>
-<body>
-  <div class="drawer" id="drawer">
-    <div class="panel">
-      <button class="close" onclick="toggleDrawer(false)">×</button>
-      <a class="navlink" href="index.html">🏠 الرئيسية</a>
-      <a class="navlink" href="#today-codes" onclick="toggleDrawer(false)">⚽ أكواد اليوم المتاحة</a>
-      <a class="navlink" href="#won-codes" onclick="toggleDrawer(false)">💸 أكواد اليوم الرابحة</a>
-      <a class="navlink" href="winners.html">🏆 الأكواد الرابحة</a>
-      <a class="navlink gold" href="https://t.me/+41dt_ow6bGY4YWNk" target="_blank">📣 قناة التليجرام</a>
-    </div>
-  </div>
-
+<body data-page="home">
   <div class="topbar">
-    🎁 سجل الآن في MELBET واحصل على مكافأة ترحيبية حصرية!
-    <div class="top-actions">
-      <a class="pill" href="#hero">A1VIP</a>
-      <a class="pill" href="#hero">← احصل على الهدية</a>
+    <div class="container">
+      <h2>🎁 سجل الآن في MELBET واحصل على مكافأة ترحيبية حصرية!</h2>
+      <div class="top-actions">
+        <a class="btn btn-dark btn-sm" href="#">احصل على الهدية ←</a>
+        <div class="badge-code">A1VIP</div>
+      </div>
     </div>
   </div>
 
-  <header class="header">
-    <div class="nav">
-      <button class="menu-btn" onclick="toggleDrawer(true)">☰</button>
-      <div class="logo">
-        <div class="logo-text"><span class="w">A1VIP <span class="g">KORA</span></span><small><span class="y">CODE</span></small></div>
-        <div class="logo-ball">⚽</div>
+  <header class="site-header">
+    <div class="container header-wrap">
+      <div class="brand">
+        <div class="brand-logo"><span>⚽</span></div>
+        <div class="brand-text">
+          <div class="main">A1VIP <span class="green">KORA</span></div>
+          <span class="sub">CODE</span>
+        </div>
       </div>
+      <button class="menu-btn" id="openDrawer" aria-label="القائمة">
+        <div class="lines"><span></span><span></span><span></span></div>
+      </button>
     </div>
   </header>
 
-  <main class="wrap">
-    <section class="hero" id="hero">
-      <div style="text-align:center"><span class="hero-badge">⚡ توقعات يومية مضمونة بنسبة %100</span></div>
-      <div class="hero-title">سجّل الآن في <span class="mel">MELBET</span></div>
-      <div class="promo">
-        <div class="promo-code">A1VIP</div>
-        <div class="hero-sub">ببروموكود</div>
+  <div class="drawer" id="drawer">
+    <aside class="drawer-panel">
+      <div class="drawer-head">
+        <button class="icon-x" id="closeDrawer">×</button>
+        <div class="brand-text">
+          <div class="main" style="font-size:40px">A1VIP <span class="green">KORA</span></div>
+          <span class="sub" style="font-size:20px">CODE</span>
+        </div>
       </div>
-      <div class="hero-sub">واحصل على مكافأة حصرية ترحيبية 🎁</div>
-      <div class="hero-desc">
-        عند التسجيل للحصول على المكافأة اكتب بروموكود <b>A1VIP</b>
-        في خانه الرمز الترويجي أو <b>PROMOCODE</b>
-        للحصول على مكافأة مالية حصرية لك<br>
-        وأبدا الرهان على توقعاتنا المضمونة بنسبة %100
+      <nav class="nav-list">
+        <a class="nav-link active" href="index.html"><span>الرئيسية</span><span>⚽</span></a>
+        <a class="nav-link" href="winners.html"><span>الأكواد الرابحة</span><span>🏆</span></a>
+        <a class="nav-link" href="https://t.me/+41dt_ow6bGY4YWNk" target="_blank"><span>قناة التليجرام</span><span>📢</span></a>
+      </nav>
+    </aside>
+  </div>
+
+  <main class="page">
+    <section class="hero">
+      <div class="container">
+        <div class="hero-card">
+          <div class="pill pill-green">⚡ توقعات يومية مضمونة بنسبة 100%</div>
+          <h1 class="hero-title">سجّل الآن في <span class="gold">MELBET</span></h1>
+          <div style="text-align:center;margin-bottom:8px">
+            <span class="promo-code">A1VIP</span>
+          </div>
+          <h2 style="text-align:center;font-size:54px;margin:0 0 16px;font-weight:900">ببروموكود</h2>
+          <p class="hero-sub">
+            🎁 واحصل على مكافأة حصرية ترحيبية<br><br>
+            عند التسجيل للحصول على المكافأة اكتب بروموكود <strong style="color:#ffd24f">A1VIP</strong>
+            في خانه الرمز الترويجي أو <strong>PROMOCODE</strong> للحصول على مكافأة مالية حصرية لك
+            وأبدا الرهان على توقعاتنا المضمونة بنسبة 100%
+          </p>
+          <div class="hero-cta-stack">
+            <a class="btn btn-main btn-gold" href="#">سجل ب بروموكود A1VIP<br>واحصل على الهدية الآن 🎁</a>
+          </div>
+        </div>
       </div>
-      <a class="cta gold" href="https://t.me/+41dt_ow6bGY4YWNk" target="_blank">سجل ب بروموكود A1VIP واحصل على الهدية الآن 🎁</a>
-      <a class="cta green" href="#today-codes">⚽ شاهد الأكواد</a>
     </section>
 
-    <section class="section" id="today-codes">
-      <div class="sec-title">⚽ أكواد اليوم المتاحة</div>
-      <div class="sec-sub">انسخ الكود واستخدمه مباشر في تطبيق MELBET</div>
-      <div class="divider"></div>
-      <div id="activeCodes" class="cards"></div>
+    <section class="section" id="available">
+      <div class="container">
+        <div class="section-head">
+          <h2 class="section-title">⚽ أكواد اليوم المتاحة</h2>
+          <p class="section-subtitle">انسخ الكود واستخدمه مباشر في تطبيق MELBET</p>
+        </div>
+        <div class="cards" id="availableCodes"></div>
+      </div>
     </section>
 
-    <section class="section" id="won-codes" style="margin-top:26px">
-      <div class="sec-title">💸 أكواد اليوم الرابحة</div>
-      <div class="sec-sub">🏆 الأكواد الي كسبت النهاردة</div>
-      <div class="divider"></div>
-      <div id="wonToday" class="cards"></div>
+    <section class="section" id="won-today">
+      <div class="container">
+        <div class="section-head">
+          <h2 class="section-title glow-green">💸 أكواد اليوم الرابحة</h2>
+          <p class="section-subtitle">🏆 الأكواد الي كسبت النهاردة</p>
+        </div>
+        <div class="cards" id="todayWinners"></div>
+      </div>
     </section>
 
     <section class="section">
-      <div class="message-card gold">
-        <div class="message-title">لم تسجّل في <span class="gold">Melbet</span> بعد؟</div>
-        <div class="message-text">
-          سجّل الآن واحصل على مكافأة مالية كبيرة عند التسجيل!<br>
-          للحصول على المكافأة استخدم بروموكود <span class="gold">A1VIP</span>
-          واحصل على مكافأة حصرية وابدأ الرهان على توقعاتنا المضمونة بنسبة %100
+      <div class="container">
+        <div class="gold-cta-card">
+          <div style="font-size:92px;line-height:1;margin-bottom:8px">🎰</div>
+          <h2 class="big-title">لم تسجّل في <span style="color:#ffd24f">Melbet</span> بعد؟</h2>
+          <p>
+            سجّل الآن واحصل على مكافأة مالية كبيرة عند التسجيل!<br>
+            للحصول على المكافأة استخدم بروموكود <strong style="color:#ffd24f">A1VIP</strong>
+            واحصل على مكافأة حصرية وابدأ الرهان على توقعاتنا المضمونة بنسبة 100%
+          </p>
+          <a class="btn btn-main btn-gold" href="#">🎁 ابدأ الآن واحصل على الهدية</a>
         </div>
-        <a class="cta gold" href="https://t.me/+41dt_ow6bGY4YWNk" target="_blank">🎁 ابدأ الآن واحصل على الهدية</a>
       </div>
     </section>
-
-    <footer class="footer">
-      <div class="rights">جميع الحقوق محفوظة ل A1VIP KORA CODE 2026</div>
-      <a class="telegram" href="https://t.me/+41dt_ow6bGY4YWNk" target="_blank">📣 قناة تليجرام</a>
-    </footer>
   </main>
 
-  <script>
-    const TELEGRAM_URL = 'https://t.me/+41dt_ow6bGY4YWNk';
-    const storageKey = 'a1vip_codes_v2';
-    const todayStr = () => new Date().toISOString().slice(0,10);
-    const todayHuman = (d) => new Date(d).toLocaleDateString('ar-EG',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-    const defaultCodes = [
-      {id:1, code:'29Y6X', odds:2.25, status:'active', date:todayStr(), screenshot:'https://dummyimage.com/900x1100/f6f6f6/222&text=Proof+Image', tag:'أكثر من 7.5', note1:'✅ الكود هايشتغل على MELBET مع الناس الي مسجلة حسابها ب بروموكود A1VIP فقط 🏆', note2:'🏆 ده شرح طريقة تنزيل تطبيق MELBET والتسجيل ببروموكود A1VIP عشان الأكواد تشتغل معاك ⬇️'},
-      {id:2, code:'DQU6X', odds:1.66, status:'won', date:todayStr(), screenshot:'https://dummyimage.com/900x1100/f6f6f6/222&text=Winning+Proof', wonAt:new Date().toISOString()},
-    ];
-    function getCodes(){
-      const saved = localStorage.getItem(storageKey);
-      if(!saved){ localStorage.setItem(storageKey, JSON.stringify(defaultCodes)); return defaultCodes; }
-      try{return JSON.parse(saved)||defaultCodes}catch{return defaultCodes}
-    }
-    function toggleDrawer(open){document.getElementById('drawer').classList.toggle('open', open)}
-    document.getElementById('drawer').addEventListener('click',e=>{if(e.target.id==='drawer')toggleDrawer(false)})
-    function copyCode(code){navigator.clipboard.writeText(code).then(()=>alert('تم نسخ الكود: '+code))}
-    function renderCard(item,won=false){
-      const d = todayHuman(item.date);
-      return `
-      <article class="card">
-        <div class="index-badge">${item.id}</div>
-        ${won?'<div class="status-badge">✅ رابح</div>':''}
-        <div class="code-box">${item.code}</div>
-        <div class="meta">
-          <div>
-            <div class="odds">x${Number(item.odds).toFixed(2)}</div>
-            <small>نسبة ربح الكود</small>
-          </div>
-          <div class="proof-label">📸 ${won?'إثبات الربح':'صورة الكود'}</div>
-        </div>
-        <div class="shot"><img src="${item.screenshot || 'https://dummyimage.com/900x1100/f6f6f6/222&text=Image'}" alt="proof"></div>
-        <div class="details">
-          <div class="date-row"><span class="tag">${won?'تم الدفع':'متاح الآن'}</span><span>${d}</span></div>
-          ${!won ? `<div class="info-box">
-              ${item.note1 || ''}<br>
-              ⚽ نراكم بعد الفوز ↗️
-              <hr style="border-color:rgba(9,242,108,.12)">
-              ${item.note2 || ''}
-              <a class="info-cta" href="${TELEGRAM_URL}" target="_blank">اضغط هنا للوصول للشرح اضغط هنا ←</a>
-              <a class="info-cta alt" href="${TELEGRAM_URL}" target="_blank">شرح طريقة استخدام الكود ←</a>
-          </div>`:''}
-          ${!won ? `<button class="copy-btn" onclick="copyCode('${item.code}')">📋 انسخ الكود</button>
-          <a class="play-btn" href="${TELEGRAM_URL}" target="_blank">🎰 العب الآن على Melbet</a>`:''}
-        </div>
-      </article>`
-    }
-    function render(){
-      const codes = getCodes();
-      const today = todayStr();
-      const active = codes.filter(c=>c.status==='active' && c.date===today);
-      const wonToday = codes.filter(c=>c.status==='won' && c.date===today);
-      document.getElementById('activeCodes').innerHTML = active.length? active.map(c=>renderCard(c,false)).join('') : '<div class="empty">لا توجد أكواد متاحة حالياً</div>';
-      document.getElementById('wonToday').innerHTML = wonToday.length? wonToday.map(c=>renderCard(c,true)).join('') : '<div class="empty">لا توجد أكواد ربحت اليوم بعد</div>';
-    }
-    render();
-  </script>
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-brand">A1VIP <span class="green">KORA</span> <span class="gold">CODE</span></div>
+      <div class="footer-sub">أفضل أكواد التوقعات الرياضية على Melbet</div>
+      <a class="telegram-fab" href="https://t.me/+41dt_ow6bGY4YWNk" target="_blank" aria-label="Telegram">✈️</a>
+      <a class="btn btn-main btn-gold" style="max-width:100%;font-size:30px;padding:18px 22px" href="#">🎁 احصل على الهدية - بروموكود A1VIP</a>
+      <div class="footer-small" style="margin-top:18px">جميع الحقوق محفوظة لـ A1VIP KORA CODE 2026</div>
+    </div>
+  </footer>
+  <script src="app.js"></script>
 </body>
 </html>
