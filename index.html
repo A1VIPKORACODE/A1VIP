@@ -1,69 +1,1160 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <title>A1VIP Codes</title>
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>A1VIP KORA CODE</title>
   <style>
+    :root {
+      --bg: #020806;
+      --panel: #061811;
+      --panel-2: #082319;
+      --line: #114231;
+      --green: #17f58a;
+      --green-2: #0fce72;
+      --yellow: #f7be09;
+      --yellow-2: #d59a00;
+      --text: #f3fff9;
+      --muted: #9bc6b2;
+      --danger: #ff5c5c;
+      --card-shadow: 0 0 0 1px rgba(23,245,138,.08), 0 22px 44px rgba(0,0,0,.35), 0 0 35px rgba(23,245,138,.08);
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
       margin: 0;
-      font-family: Arial;
-      background: linear-gradient(135deg, #0f172a, #1e293b);
+      font-family: Tahoma, Arial, sans-serif;
+      background:
+        radial-gradient(circle at 50% 12%, rgba(23,245,138,.13), transparent 20%),
+        linear-gradient(180deg, #030a07 0%, #010504 100%);
+      color: var(--text);
+    }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+    button, input, select, textarea { font: inherit; }
+
+    .top-banner {
+      background: repeating-linear-gradient(-45deg, #e7a100, #e7a100 14px, #db9700 14px, #db9700 28px);
+      color: #111;
+      padding: 14px 12px 18px;
+      text-align: center;
+      box-shadow: inset 0 -1px 0 rgba(0,0,0,.18);
+    }
+    .top-banner p {
+      margin: 0 0 12px;
+      font-size: 16px;
+      line-height: 1.8;
+      font-weight: 900;
+    }
+    .banner-actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .pill, .btn {
+      border: none;
+      cursor: pointer;
+      border-radius: 14px;
+      transition: .2s transform, .2s opacity, .2s box-shadow;
+    }
+    .pill:active, .btn:active { transform: translateY(1px) scale(.99); }
+
+    .pill.dark {
+      background: #0a0a0a;
+      color: #f9d33a;
+      padding: 12px 20px;
+      font-weight: 900;
+      box-shadow: 0 10px 20px rgba(0,0,0,.22);
+    }
+
+    .shell { max-width: 1120px; margin: 0 auto; padding: 0 14px 28px; }
+
+    .navbar {
+      margin-top: 14px;
+      background: rgba(0, 8, 5, .92);
+      border: 1px solid rgba(23,245,138,.12);
+      border-radius: 20px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: var(--card-shadow);
+      position: sticky;
+      top: 8px;
+      z-index: 20;
+      backdrop-filter: blur(10px);
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 900;
+      letter-spacing: .3px;
+    }
+    .logo-badge {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at 30% 30%, #2dffb2, #00a851);
+      box-shadow: 0 0 24px rgba(23,245,138,.35);
+      font-size: 28px;
+    }
+    .logo .brand-main { font-size: 18px; }
+    .logo .brand-main b { color: var(--green); }
+    .logo .brand-sub {
+      color: var(--yellow);
+      font-size: 12px;
+      margin-top: -3px;
+      text-align: left;
+    }
+    .nav-links {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .nav-link {
+      background: rgba(23,245,138,.06);
+      color: #dff8eb;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      border: 1px solid rgba(23,245,138,.08);
+    }
+    .nav-link.active {
+      background: linear-gradient(180deg, rgba(23,245,138,.2), rgba(23,245,138,.08));
+      box-shadow: inset 0 0 0 1px rgba(23,245,138,.15);
+      color: var(--green);
+    }
+
+    .hero {
+      margin-top: 18px;
+      background:
+        radial-gradient(circle at 50% 18%, rgba(23,245,138,.18), transparent 32%),
+        linear-gradient(180deg, #05140f, #03110b);
+      border: 1px solid rgba(23,245,138,.12);
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: var(--card-shadow);
+      padding: 18px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.12fr .88fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .hero-panel, .info-panel {
+      background: linear-gradient(180deg, rgba(5,23,16,.92), rgba(3,13,10,.92));
+      border: 1px solid rgba(23,245,138,.08);
+      border-radius: 24px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-panel::before,
+    .info-panel::before,
+    .card::before,
+    .code-card::before,
+    .stats-card::before,
+    .admin-block::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(23,245,138,.05), transparent 38%);
+      pointer-events: none;
+    }
+
+    .section-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(247,190,9,.12);
+      color: #ffd54e;
+      border: 1px solid rgba(247,190,9,.22);
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-weight: 900;
+      font-size: 15px;
+      margin-bottom: 12px;
+      box-shadow: 0 0 20px rgba(247,190,9,.08);
+    }
+
+    .hero-title {
+      margin: 10px 0;
+      font-size: clamp(34px, 5vw, 64px);
+      line-height: 1.1;
+      font-weight: 900;
+      text-shadow: 0 0 22px rgba(23,245,138,.28);
+    }
+    .hero-title .accent { color: var(--green); }
+    .subline {
+      color: #b7e1cb;
+      font-size: 17px;
+      line-height: 1.9;
+      margin: 0 0 14px;
+    }
+    .hero-cta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .btn {
+      padding: 14px 18px;
+      font-weight: 900;
+      border-radius: 14px;
+    }
+    .btn-yellow {
+      background: linear-gradient(180deg, #ffd339, #f1b400);
+      color: #111;
+      box-shadow: 0 12px 26px rgba(247,190,9,.22);
+    }
+    .btn-green {
+      background: linear-gradient(180deg, #18f58a, #09b760);
+      color: #052414;
+      box-shadow: 0 12px 26px rgba(23,245,138,.18);
+    }
+    .btn-dark {
+      background: #0d1411;
+      color: #effef8;
+      border: 1px solid rgba(255,255,255,.06);
+    }
+    .btn-danger {
+      background: linear-gradient(180deg, #ff6d6d, #d43838);
       color: white;
+    }
+    .btn-muted {
+      background: rgba(255,255,255,.05);
+      color: #dcebe4;
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .muted-note {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+      margin-top: 10px;
+    }
+
+    .stats-card {
+      margin-top: 16px;
+      background: linear-gradient(180deg, rgba(4,30,20,.95), rgba(4,17,12,.95));
+      border: 1px solid rgba(23,245,138,.12);
+      border-radius: 24px;
+      padding: 18px;
+      position: relative;
+      box-shadow: var(--card-shadow);
+    }
+    .stats-card h3,
+    .section-title {
+      margin: 0 0 12px;
+      font-size: 24px;
       text-align: center;
     }
+    .section-title { margin-top: 28px; }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .stat-box {
+      background: rgba(0,0,0,.24);
+      border: 1px solid rgba(23,245,138,.12);
+      border-radius: 18px;
+      padding: 16px;
+      text-align: center;
+    }
+    .stat-box .num {
+      font-size: 38px;
+      font-weight: 900;
+      color: var(--green);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+    .stat-box.yellow .num { color: #ffd13f; }
+    .stat-box .label { color: #bfe8d3; font-size: 14px; }
 
-    h1 {
-      margin-top: 50px;
-      font-size: 40px;
-      color: #facc15;
+    .big-profit {
+      margin-top: 14px;
+      background: linear-gradient(180deg, rgba(6,51,31,.95), rgba(3,28,18,.95));
+      border-radius: 18px;
+      border: 1px solid rgba(23,245,138,.12);
+      padding: 16px;
+      text-align: center;
+    }
+    .big-profit .profit {
+      color: var(--green);
+      font-weight: 900;
+      font-size: clamp(34px, 7vw, 52px);
+      margin-top: 8px;
+      text-shadow: 0 0 22px rgba(23,245,138,.25);
     }
 
-    .card {
-      background: #111827;
-      margin: 30px auto;
-      padding: 20px;
-      width: 300px;
-      border-radius: 15px;
-      box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1fr 350px;
+      gap: 18px;
+      margin-top: 22px;
+      align-items: start;
     }
 
-    .code {
-      font-size: 22px;
-      color: #22c55e;
-      margin: 10px 0;
+    .stack {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
     }
 
-    button {
-      padding: 10px 20px;
-      background: #22c55e;
-      border: none;
+    .card, .admin-block, .code-card {
+      background: linear-gradient(180deg, rgba(5,21,15,.96), rgba(3,11,8,.96));
+      border: 1px solid rgba(23,245,138,.12);
+      border-radius: var(--radius);
+      box-shadow: var(--card-shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card { padding: 18px; }
+    .card h2 { margin: 0 0 12px; }
+
+    .tips-list { display: grid; gap: 14px; }
+
+    .code-card {
+      padding: 16px;
+    }
+    .code-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .badge-green { background: rgba(23,245,138,.14); color: var(--green); border: 1px solid rgba(23,245,138,.15); }
+    .badge-yellow { background: rgba(247,190,9,.12); color: #ffd74d; border: 1px solid rgba(247,190,9,.18); }
+    .badge-red { background: rgba(255,92,92,.14); color: #ff9696; border: 1px solid rgba(255,92,92,.16); }
+
+    .code-value {
+      font-size: clamp(30px, 6vw, 44px);
+      text-align: center;
+      letter-spacing: 8px;
+      color: var(--green);
+      margin: 8px 0 14px;
+      font-weight: 900;
+      text-shadow: 0 0 22px rgba(23,245,138,.22);
+    }
+    .code-meta {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .meta-box {
+      background: rgba(255,255,255,.03);
+      border-radius: 14px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255,255,255,.06);
+    }
+    .meta-box .key {
+      display: block;
+      color: #99bea9;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .meta-box .value {
+      font-weight: 900;
+      font-size: 18px;
+    }
+    .code-image, .proof-image {
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.08);
+      background: #09100d;
+      margin-top: 12px;
+    }
+    .code-image img, .proof-image img {
+      width: 100%;
+      height: auto;
+      object-fit: cover;
+    }
+    .code-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .code-actions .btn { flex: 1; min-width: 115px; }
+
+    .helper-card {
+      background: linear-gradient(180deg, rgba(62,44,3,.9), rgba(32,22,3,.9));
+      border: 1px solid rgba(247,190,9,.16);
+      padding: 18px;
+      border-radius: 22px;
+      box-shadow: 0 0 30px rgba(247,190,9,.08);
+    }
+    .helper-card h3 { color: #ffe175; margin: 0 0 10px; }
+    .steps { margin: 0; padding-right: 18px; color: #f5e7af; line-height: 2; }
+
+    .footer-card {
+      margin-top: 24px;
+      text-align: center;
+      padding: 18px;
+      color: #c7e7d7;
+      font-size: 14px;
+    }
+
+    .admin-wrap { display: none; margin-top: 22px; }
+    .admin-wrap.active { display: block; }
+    .home-wrap.hidden { display: none; }
+
+    .admin-grid {
+      display: grid;
+      grid-template-columns: 1.08fr .92fr;
+      gap: 18px;
+      align-items: start;
+    }
+    .admin-block { padding: 18px; }
+    .admin-block h2 { margin: 0 0 14px; }
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .field-grid.one { grid-template-columns: 1fr; }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .field label {
+      color: #bbe7d0;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .input, .textarea, .select {
+      width: 100%;
+      background: rgba(0,0,0,.28);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 14px;
+      color: var(--text);
+      padding: 14px 14px;
+      outline: none;
+    }
+    .textarea { min-height: 94px; resize: vertical; }
+    .input:focus, .textarea:focus, .select:focus {
+      border-color: rgba(23,245,138,.45);
+      box-shadow: 0 0 0 3px rgba(23,245,138,.08);
+    }
+    .admin-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .table-wrap { overflow: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 720px;
+    }
+    th, td {
+      padding: 12px 10px;
+      text-align: right;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      vertical-align: top;
+      font-size: 14px;
+    }
+    th { color: #9dc7b3; font-weight: 800; }
+    td .mini-actions {
+      display: flex; gap: 6px; flex-wrap: wrap;
+    }
+    .tiny {
+      padding: 8px 10px;
       border-radius: 10px;
+      border: none;
       cursor: pointer;
-      font-weight: bold;
+      font-weight: 800;
+      background: rgba(255,255,255,.06);
+      color: white;
+    }
+    .tiny.green { background: rgba(23,245,138,.15); color: var(--green); }
+    .tiny.yellow { background: rgba(247,190,9,.16); color: #ffd54d; }
+    .tiny.red { background: rgba(255,92,92,.16); color: #ff9797; }
+    .tiny.blue { background: rgba(96,165,250,.16); color: #8dc2ff; }
+
+    .login-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 16px;
+    }
+    .login-overlay.show { display: flex; }
+    .login-box {
+      width: min(440px, 100%);
+      background: linear-gradient(180deg, #081c13, #03110b);
+      border-radius: 24px;
+      border: 1px solid rgba(23,245,138,.14);
+      box-shadow: var(--card-shadow);
+      padding: 22px;
+    }
+    .login-box h3 { margin: 0 0 10px; }
+
+    .empty {
+      text-align: center;
+      color: #aac8b7;
+      padding: 18px 10px;
+      background: rgba(255,255,255,.03);
+      border-radius: 18px;
+      border: 1px dashed rgba(255,255,255,.08);
     }
 
-    button:hover {
-      background: #16a34a;
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%) translateY(30px);
+      background: rgba(6,22,15,.96);
+      border: 1px solid rgba(23,245,138,.18);
+      color: #effff7;
+      padding: 12px 18px;
+      border-radius: 999px;
+      box-shadow: var(--card-shadow);
+      opacity: 0;
+      transition: .25s;
+      z-index: 120;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 920px) {
+      .hero-grid,
+      .content-grid,
+      .admin-grid { grid-template-columns: 1fr; }
+      .navbar { flex-wrap: wrap; justify-content: center; }
+      .logo { width: 100%; justify-content: center; }
+      .nav-links { justify-content: center; }
+    }
+
+    @media (max-width: 620px) {
+      .shell { padding: 0 10px 22px; }
+      .hero, .stats-card, .card, .admin-block, .code-card { border-radius: 20px; }
+      .hero-title { font-size: 42px; }
+      .stats-grid, .field-grid, .code-meta { grid-template-columns: 1fr; }
+      .banner-actions, .hero-cta, .code-actions, .admin-actions { flex-direction: column; }
+      .btn, .pill.dark { width: 100%; }
+      .code-value { letter-spacing: 5px; font-size: 34px; }
     }
   </style>
 </head>
-
 <body>
-
-  <h1>🔥 A1VIP CODES 🔥</h1>
-
-  <div class="card">
-    <p>Code 1</p>
-    <div class="code">A1VIP123</div>
-    <button onclick="alert('Copied!')">Copy</button>
+  <div class="top-banner">
+    <p>🎁 سجل الآن في <b>MELBET</b> واحصل على مكافأة ترحيبية حصرية!</p>
+    <div class="banner-actions">
+      <a class="pill dark" id="giftTopBtn" href="#">A1VIP</a>
+      <a class="pill dark" id="giftTopBtn2" href="#">⬅ احصل على الهدية</a>
+    </div>
   </div>
 
-  <div class="card">
-    <p>Code 2</p>
-    <div class="code">WIN500</div>
-    <button onclick="alert('Copied!')">Copy</button>
+  <div class="shell">
+    <header class="navbar">
+      <div class="logo">
+        <div class="logo-badge">⚽</div>
+        <div>
+          <div class="brand-main">A1VIP <b>KORA</b></div>
+          <div class="brand-sub">CODE</div>
+        </div>
+      </div>
+      <nav class="nav-links">
+        <a href="#home" class="nav-link active" id="navHome">الرئيسية</a>
+        <a href="#won" class="nav-link" id="navWon">الأكواد الرابحة</a>
+        <a href="#admin" class="nav-link" id="navAdmin">لوحة الإدارة</a>
+      </nav>
+    </header>
+
+    <main class="home-wrap" id="homeView">
+      <section class="hero">
+        <div class="hero-grid">
+          <div class="hero-panel">
+            <div class="section-chip">🏆 الأكواد الرابحة</div>
+            <h1 class="hero-title">سجل <span class="accent">الانتصارات</span></h1>
+            <p class="subline">
+              تابع أكواد اليوم المتاحة، وشاهد الأكواد التي ربحت، واستفد من بروموكود
+              <b style="color:#ffd54d">A1VIP</b> على Melbet.
+            </p>
+            <div class="hero-cta">
+              <a class="btn btn-yellow" id="giftMainBtn" href="#">🎁 احصل على الهدية الآن</a>
+              <a class="btn btn-green" href="#activeCodes">⚽ عرض الأكواد</a>
+              <a class="btn btn-dark" id="usageBtn" href="#">📘 طريقة استخدام الكود</a>
+            </div>
+            <p class="muted-note">لو رميت 1000 جنيه على أكوادنا المضمونة هاتشوف أرباحك التقريبية هنا تلقائيًا.</p>
+          </div>
+
+          <div class="info-panel">
+            <div class="section-chip">📊 إحصائيات آخر 30 يوم</div>
+            <div class="big-profit">
+              <div style="font-size:15px;color:#cfe8da">لو كنت رميت <b style="color:#ffd74d">1000 جنيه</b> بس على أكوادنا المضمونة</div>
+              <div class="profit" id="profitExample">0 جنيه</div>
+              <div class="muted-note">يعتمد الحساب على مجموع نسب الربح للأكواد الرابحة خلال آخر 30 يوم.</div>
+            </div>
+            <div class="stats-grid" style="margin-top:16px">
+              <div class="stat-box"><div class="num" id="todayActiveCount">0</div><div class="label">الأكواد المتاحة الآن</div></div>
+              <div class="stat-box"><div class="num" id="todayWonCount">0</div><div class="label">الأكواد التي ربحت اليوم</div></div>
+              <div class="stat-box yellow"><div class="num" id="sumWonOdds">0</div><div class="label">مجموع نسب الربح</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="content-grid">
+        <div class="stack">
+          <section class="stats-card">
+            <h3>⚽ احصائيات الأكواد الرابحة ⚽</h3>
+            <div class="stats-grid">
+              <div class="stat-box"><div class="num" id="stats30Codes">0</div><div class="label">أكواد آخر 30 يوم</div></div>
+              <div class="stat-box"><div class="num" id="stats30Won">0</div><div class="label">الأكواد الرابحة</div></div>
+              <div class="stat-box yellow"><div class="num" id="stats30Avg">0</div><div class="label">متوسط نسبة الربح</div></div>
+            </div>
+          </section>
+
+          <section class="card" id="activeCodes">
+            <h2 class="section-title">⚽ الأكواد المتاحة اليوم</h2>
+            <div class="tips-list" id="activeList"></div>
+          </section>
+
+          <section class="card" id="wonCodes">
+            <h2 class="section-title">🏆 الأكواد التي ربحت اليوم</h2>
+            <div class="tips-list" id="wonList"></div>
+          </section>
+        </div>
+
+        <aside class="stack">
+          <div class="helper-card">
+            <h3>🔥 استغل الفرصة الآن واستخدم أكوادنا المضمونة</h3>
+            <ol class="steps">
+              <li>نزل تطبيق <b>MELBET</b></li>
+              <li>سجل باستخدام بروموكود <b>A1VIP</b></li>
+              <li>انسخ الكود من الموقع</li>
+              <li>استخدمه داخل التطبيق واربح</li>
+            </ol>
+            <div class="hero-cta" style="margin-top:14px">
+              <a class="btn btn-yellow" id="giftSideBtn" href="#">🎁 العب الآن واحصل على الهدية</a>
+              <a class="btn btn-dark" id="tutorialBtn" href="#">📺 اضغط هنا للشرح</a>
+            </div>
+          </div>
+
+          <div class="card footer-card">
+            <div style="font-size:26px;font-weight:900">A1VIP <span style="color:var(--green)">KORA</span> CODE</div>
+            <div style="margin-top:8px">اخبار كود التوقعات الرياضي على Melbet</div>
+            <div class="hero-cta" style="margin-top:16px;justify-content:center">
+              <a class="btn btn-yellow" id="giftFooterBtn" href="#">🎁 احصل على الهدية + بروموكود A1VIP</a>
+            </div>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <main class="admin-wrap" id="adminView">
+      <div class="admin-grid">
+        <section class="admin-block">
+          <h2>⚙️ إضافة / تعديل كود</h2>
+          <div class="field-grid">
+            <div class="field">
+              <label>الكود</label>
+              <input class="input" id="tipCode" placeholder="مثال: DQU6X" />
+            </div>
+            <div class="field">
+              <label>نسبة الربح</label>
+              <input class="input" id="odds" type="number" step="0.01" placeholder="مثال: 1.66" />
+            </div>
+            <div class="field">
+              <label>نوع التوقع</label>
+              <input class="input" id="tipOutcome" placeholder="مثال: أقل من 7.5" />
+            </div>
+            <div class="field">
+              <label>التاريخ</label>
+              <input class="input" id="dayDate" type="date" />
+            </div>
+          </div>
+          <div class="field-grid one" style="margin-top:12px">
+            <div class="field">
+              <label>الوصف</label>
+              <textarea class="textarea" id="description" placeholder="اكتب وصف مختصر للكود"></textarea>
+            </div>
+          </div>
+          <div class="field-grid" style="margin-top:12px">
+            <div class="field">
+              <label>رابط صورة الكود</label>
+              <input class="input" id="codeImageUrl" placeholder="https://..." />
+            </div>
+            <div class="field">
+              <label>رابط صورة الإثبات</label>
+              <input class="input" id="proofImageUrl" placeholder="https://..." />
+            </div>
+          </div>
+          <div class="field-grid" style="margin-top:12px">
+            <div class="field">
+              <label>حالة الكود</label>
+              <select class="select" id="status">
+                <option value="active">متاح الآن</option>
+                <option value="won">رابح</option>
+                <option value="lost">خاسر</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>بروموكود التسجيل</label>
+              <input class="input" id="promoCode" placeholder="A1VIP" value="A1VIP" />
+            </div>
+          </div>
+          <div class="admin-actions">
+            <button class="btn btn-green" id="saveTipBtn">✅ حفظ الكود</button>
+            <button class="btn btn-muted" id="resetFormBtn">إلغاء / تفريغ</button>
+          </div>
+          <div class="muted-note" id="editLabel" style="margin-top:10px">أنت الآن في وضع إضافة كود جديد.</div>
+        </section>
+
+        <section class="admin-block">
+          <h2>📊 إحصائيات الإدارة</h2>
+          <div class="stats-grid">
+            <div class="stat-box"><div class="num" id="adminTotal">0</div><div class="label">إجمالي الأكواد</div></div>
+            <div class="stat-box"><div class="num" id="adminWon">0</div><div class="label">عدد الرابحة</div></div>
+            <div class="stat-box yellow"><div class="num" id="adminActive">0</div><div class="label">المتاحة</div></div>
+          </div>
+          <div class="admin-actions" style="margin-top:16px">
+            <button class="btn btn-dark" id="logoutBtn">تسجيل خروج الأدمن</button>
+            <button class="btn btn-danger" id="clearAllBtn">حذف كل الأكواد</button>
+          </div>
+          <p class="muted-note">النسخة دي شغالة الآن بدون باك إند. البيانات محفوظة في المتصفح عبر LocalStorage. بعد موافقتك أبني لك النسخة النهائية المتصلة بـ Supabase.</p>
+        </section>
+      </div>
+
+      <section class="admin-block" style="margin-top:18px">
+        <h2>📋 كل الأكواد</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>الكود</th>
+                <th>النسبة</th>
+                <th>النوع</th>
+                <th>الحالة</th>
+                <th>التاريخ</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="adminTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
   </div>
 
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-box">
+      <h3>🔐 دخول الأدمن</h3>
+      <p class="muted-note" style="margin:0 0 12px">كلمة المرور الافتراضية: <b>A1VIP2026</b> — غيرها لاحقًا في النسخة النهائية.</p>
+      <div class="field">
+        <label>كلمة المرور</label>
+        <input type="password" class="input" id="adminPasswordInput" placeholder="اكتب كلمة المرور" />
+      </div>
+      <div class="admin-actions">
+        <button class="btn btn-green" id="loginBtn">دخول</button>
+        <button class="btn btn-muted" id="cancelLoginBtn">رجوع</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const STORAGE_KEY = 'a1vip_codes_v1';
+    const AUTH_KEY = 'a1vip_admin_auth_v1';
+    const DEFAULT_PASSWORD = 'A1VIP2026';
+
+    const links = {
+      gift: '#',
+      tutorial: '#',
+      usage: '#'
+    };
+
+    let editingId = null;
+
+    const seed = [
+      {
+        id: uid(),
+        tipCode: 'DQU6X',
+        odds: 1.66,
+        tipOutcome: 'أقل من 7.5',
+        description: 'مثال لكود متاح الآن على Melbet',
+        status: 'active',
+        dayDate: todayISO(),
+        codeImageUrl: '',
+        proofImageUrl: '',
+        promoCode: 'A1VIP',
+        createdAt: Date.now() - 1000 * 60 * 60
+      },
+      {
+        id: uid(),
+        tipCode: '29Y6X',
+        odds: 2.25,
+        tipOutcome: 'أكثر من 7.5',
+        description: 'مثال لكود رابح اليوم',
+        status: 'won',
+        dayDate: todayISO(),
+        codeImageUrl: '',
+        proofImageUrl: '',
+        promoCode: 'A1VIP',
+        createdAt: Date.now() - 1000 * 60 * 60 * 2
+      }
+    ];
+
+    init();
+
+    function init() {
+      attachCTA();
+      ensureSeed();
+      document.getElementById('dayDate').value = todayISO();
+      bindEvents();
+      route();
+      renderAll();
+      window.addEventListener('hashchange', route);
+    }
+
+    function attachCTA() {
+      ['giftTopBtn','giftTopBtn2','giftMainBtn','giftSideBtn','giftFooterBtn'].forEach(id => {
+        document.getElementById(id).href = links.gift;
+        if (links.gift === '#') document.getElementById(id).addEventListener('click', e => { e.preventDefault(); toast('حط رابط الأفيليت الحقيقي داخل الكود أولاً'); });
+      });
+      ['tutorialBtn'].forEach(id => {
+        document.getElementById(id).href = links.tutorial;
+        if (links.tutorial === '#') document.getElementById(id).addEventListener('click', e => { e.preventDefault(); toast('حط رابط الشرح الحقيقي'); });
+      });
+      ['usageBtn'].forEach(id => {
+        document.getElementById(id).href = links.usage;
+        if (links.usage === '#') document.getElementById(id).addEventListener('click', e => { e.preventDefault(); toast('حط رابط طريقة استخدام الكود'); });
+      });
+    }
+
+    function bindEvents() {
+      document.getElementById('navHome').addEventListener('click', () => location.hash = '#home');
+      document.getElementById('navWon').addEventListener('click', () => {
+        location.hash = '#home';
+        setTimeout(() => document.getElementById('wonCodes').scrollIntoView({ behavior: 'smooth' }), 50);
+      });
+      document.getElementById('navAdmin').addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!isAuthed()) return showLogin();
+        location.hash = '#admin';
+      });
+
+      document.getElementById('loginBtn').addEventListener('click', handleLogin);
+      document.getElementById('cancelLoginBtn').addEventListener('click', hideLogin);
+      document.getElementById('adminPasswordInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleLogin();
+      });
+
+      document.getElementById('saveTipBtn').addEventListener('click', saveTip);
+      document.getElementById('resetFormBtn').addEventListener('click', resetForm);
+      document.getElementById('logoutBtn').addEventListener('click', () => {
+        localStorage.removeItem(AUTH_KEY);
+        toast('تم تسجيل الخروج');
+        location.hash = '#home';
+        route();
+      });
+      document.getElementById('clearAllBtn').addEventListener('click', clearAllTips);
+    }
+
+    function route() {
+      const hash = location.hash || '#home';
+      const homeView = document.getElementById('homeView');
+      const adminView = document.getElementById('adminView');
+      const navHome = document.getElementById('navHome');
+      const navWon = document.getElementById('navWon');
+      const navAdmin = document.getElementById('navAdmin');
+
+      navHome.classList.remove('active');
+      navWon.classList.remove('active');
+      navAdmin.classList.remove('active');
+
+      if (hash === '#admin') {
+        if (!isAuthed()) {
+          showLogin();
+          location.hash = '#home';
+          return;
+        }
+        homeView.classList.add('hidden');
+        adminView.classList.add('active');
+        navAdmin.classList.add('active');
+      } else {
+        adminView.classList.remove('active');
+        homeView.classList.remove('hidden');
+        navHome.classList.add('active');
+      }
+      renderAll();
+    }
+
+    function handleLogin() {
+      const value = document.getElementById('adminPasswordInput').value.trim();
+      if (value !== DEFAULT_PASSWORD) {
+        toast('كلمة المرور غير صحيحة');
+        return;
+      }
+      localStorage.setItem(AUTH_KEY, '1');
+      document.getElementById('adminPasswordInput').value = '';
+      hideLogin();
+      toast('تم فتح لوحة الإدارة');
+      location.hash = '#admin';
+      route();
+    }
+
+    function showLogin() { document.getElementById('loginOverlay').classList.add('show'); }
+    function hideLogin() { document.getElementById('loginOverlay').classList.remove('show'); }
+    function isAuthed() { return localStorage.getItem(AUTH_KEY) === '1'; }
+
+    function getTips() {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    }
+
+    function setTips(list) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    }
+
+    function ensureSeed() {
+      const data = getTips();
+      if (!data.length) setTips(seed);
+    }
+
+    function saveTip() {
+      const tip = {
+        id: editingId || uid(),
+        tipCode: val('tipCode'),
+        odds: Number(val('odds')),
+        tipOutcome: val('tipOutcome'),
+        description: val('description'),
+        status: val('status'),
+        dayDate: val('dayDate') || todayISO(),
+        codeImageUrl: val('codeImageUrl'),
+        proofImageUrl: val('proofImageUrl'),
+        promoCode: val('promoCode') || 'A1VIP',
+        createdAt: editingId ? getTips().find(t => t.id === editingId)?.createdAt || Date.now() : Date.now()
+      };
+
+      if (!tip.tipCode || !tip.odds || !tip.tipOutcome) {
+        toast('املأ الكود والنسبة ونوع التوقع');
+        return;
+      }
+
+      const tips = getTips();
+      const index = tips.findIndex(t => t.id === tip.id);
+      if (index > -1) tips[index] = tip;
+      else tips.unshift(tip);
+      setTips(tips);
+      resetForm();
+      renderAll();
+      toast(index > -1 ? 'تم تعديل الكود' : 'تم إضافة الكود');
+    }
+
+    function resetForm() {
+      editingId = null;
+      ['tipCode','odds','tipOutcome','description','codeImageUrl','proofImageUrl'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('status').value = 'active';
+      document.getElementById('promoCode').value = 'A1VIP';
+      document.getElementById('dayDate').value = todayISO();
+      document.getElementById('editLabel').textContent = 'أنت الآن في وضع إضافة كود جديد.';
+    }
+
+    function editTip(id) {
+      const tip = getTips().find(t => t.id === id);
+      if (!tip) return;
+      editingId = id;
+      setVal('tipCode', tip.tipCode);
+      setVal('odds', tip.odds);
+      setVal('tipOutcome', tip.tipOutcome);
+      setVal('description', tip.description);
+      setVal('status', tip.status);
+      setVal('dayDate', tip.dayDate);
+      setVal('codeImageUrl', tip.codeImageUrl || '');
+      setVal('proofImageUrl', tip.proofImageUrl || '');
+      setVal('promoCode', tip.promoCode || 'A1VIP');
+      document.getElementById('editLabel').textContent = `أنت الآن تعدل الكود: ${tip.tipCode}`;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function removeTip(id) {
+      if (!confirm('هل أنت متأكد من حذف هذا الكود؟')) return;
+      setTips(getTips().filter(t => t.id !== id));
+      renderAll();
+      toast('تم حذف الكود');
+    }
+
+    function setStatus(id, status) {
+      const tips = getTips();
+      const tip = tips.find(t => t.id === id);
+      if (!tip) return;
+      tip.status = status;
+      setTips(tips);
+      renderAll();
+      const map = { active: 'تم جعل الكود متاح', won: 'تم تحديد الكود كرابح', lost: 'تم تحديد الكود كخاسر' };
+      toast(map[status]);
+    }
+
+    function clearAllTips() {
+      if (!confirm('سيتم حذف كل الأكواد من هذه النسخة المحلية. هل أنت متأكد؟')) return;
+      setTips([]);
+      renderAll();
+      resetForm();
+      toast('تم حذف كل الأكواد');
+    }
+
+    function renderAll() {
+      const tips = getTips().sort((a,b) => b.createdAt - a.createdAt);
+      renderHome(tips);
+      renderAdmin(tips);
+    }
+
+    function renderHome(tips) {
+      const today = todayISO();
+      const active = tips.filter(t => t.status === 'active');
+      const wonToday = tips.filter(t => t.status === 'won' && t.dayDate === today);
+      const recent30 = tips.filter(t => daysBetween(t.dayDate, today) <= 30);
+      const won30 = recent30.filter(t => t.status === 'won');
+      const oddsSum30 = won30.reduce((a,b) => a + Number(b.odds || 0), 0);
+      const avg30 = won30.length ? (oddsSum30 / won30.length) : 0;
+
+      document.getElementById('activeList').innerHTML = active.length ? active.map(cardTemplate).join('') : emptyTemplate('لا توجد أكواد متاحة الآن');
+      document.getElementById('wonList').innerHTML = wonToday.length ? wonToday.map(cardTemplate).join('') : emptyTemplate('لا توجد أكواد رابحة اليوم');
+
+      document.getElementById('todayActiveCount').textContent = active.length;
+      document.getElementById('todayWonCount').textContent = wonToday.length;
+      document.getElementById('sumWonOdds').textContent = formatNum(oddsSum30);
+      document.getElementById('stats30Codes').textContent = recent30.length;
+      document.getElementById('stats30Won').textContent = won30.length;
+      document.getElementById('stats30Avg').textContent = formatNum(avg30);
+      document.getElementById('profitExample').textContent = formatMoney(1000 * oddsSum30);
+
+      document.querySelectorAll('[data-copy]').forEach(btn => {
+        btn.onclick = () => copyCode(btn.dataset.copy);
+      });
+    }
+
+    function renderAdmin(tips) {
+      document.getElementById('adminTotal').textContent = tips.length;
+      document.getElementById('adminWon').textContent = tips.filter(t => t.status === 'won').length;
+      document.getElementById('adminActive').textContent = tips.filter(t => t.status === 'active').length;
+
+      const tbody = document.getElementById('adminTableBody');
+      if (!tips.length) {
+        tbody.innerHTML = `<tr><td colspan="6"><div class="empty">لا توجد أكواد بعد</div></td></tr>`;
+        return;
+      }
+      tbody.innerHTML = tips.map(t => `
+        <tr>
+          <td><b>${escapeHtml(t.tipCode)}</b><br><span style="color:#97b9a8;font-size:12px">${escapeHtml(t.description || '')}</span></td>
+          <td>${formatNum(t.odds)}</td>
+          <td>${escapeHtml(t.tipOutcome)}</td>
+          <td>${statusLabel(t.status)}</td>
+          <td>${escapeHtml(t.dayDate)}</td>
+          <td>
+            <div class="mini-actions">
+              <button class="tiny blue" onclick="editTip('${t.id}')">تعديل</button>
+              <button class="tiny green" onclick="setStatus('${t.id}','won')">رابح</button>
+              <button class="tiny yellow" onclick="setStatus('${t.id}','active')">متاح</button>
+              <button class="tiny red" onclick="setStatus('${t.id}','lost')">خاسر</button>
+              <button class="tiny" onclick="removeTip('${t.id}')">حذف</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function cardTemplate(t) {
+      const badge = t.status === 'won'
+        ? '<span class="badge badge-green">🏆 رابح</span>'
+        : t.status === 'active'
+          ? '<span class="badge badge-yellow">⚡ متاح الآن</span>'
+          : '<span class="badge badge-red">❌ خاسر</span>';
+
+      return `
+        <article class="code-card">
+          <div class="code-head">
+            ${badge}
+            <span class="badge badge-green">${escapeHtml(t.tipOutcome)}</span>
+          </div>
+          <div class="code-value">${escapeHtml(t.tipCode)}</div>
+          <div class="code-meta">
+            <div class="meta-box"><span class="key">نسبة الربح</span><span class="value">x${formatNum(t.odds)}</span></div>
+            <div class="meta-box"><span class="key">التاريخ</span><span class="value">${escapeHtml(t.dayDate)}</span></div>
+          </div>
+          ${t.description ? `<div class="muted-note">${escapeHtml(t.description)}</div>` : ''}
+          ${t.codeImageUrl ? `<div class="code-image"><img src="${escapeAttr(t.codeImageUrl)}" alt="صورة الكود"></div>` : ''}
+          ${t.status === 'won' && t.proofImageUrl ? `<div class="proof-image"><img src="${escapeAttr(t.proofImageUrl)}" alt="صورة الإثبات"></div>` : ''}
+          <div class="code-actions">
+            <button class="btn btn-green" data-copy="${escapeAttr(t.tipCode)}">📋 نسخ الكود</button>
+            <a class="btn btn-yellow" href="${links.gift}">🎁 العب الآن على Melbet</a>
+          </div>
+        </article>
+      `;
+    }
+
+    function statusLabel(status) {
+      if (status === 'won') return '<span class="badge badge-green">رابح</span>';
+      if (status === 'active') return '<span class="badge badge-yellow">متاح</span>';
+      return '<span class="badge badge-red">خاسر</span>';
+    }
+
+    function copyCode(code) {
+      navigator.clipboard.writeText(code).then(() => toast(`تم نسخ الكود: ${code}`)).catch(() => toast('انسخ الكود يدويًا'));
+    }
+
+    function emptyTemplate(text) {
+      return `<div class="empty">${text}</div>`;
+    }
+
+    function toast(message) {
+      const el = document.getElementById('toast');
+      el.textContent = message;
+      el.classList.add('show');
+      clearTimeout(el._t);
+      el._t = setTimeout(() => el.classList.remove('show'), 2400);
+    }
+
+    function uid() { return Math.random().toString(36).slice(2, 10); }
+    function todayISO() { return new Date().toISOString().split('T')[0]; }
+    function val(id) { return document.getElementById(id).value.trim(); }
+    function setVal(id, value) { document.getElementById(id).value = value; }
+    function formatNum(n) { return Number(n || 0).toFixed(2).replace(/\.00$/, ''); }
+    function formatMoney(n) { return new Intl.NumberFormat('ar-EG').format(Math.round(n || 0)) + ' جنيه'; }
+    function daysBetween(date1, date2) {
+      const a = new Date(date1 + 'T00:00:00');
+      const b = new Date(date2 + 'T00:00:00');
+      return Math.abs((b - a) / 86400000);
+    }
+    function escapeHtml(str) {
+      return String(str || '').replace(/[&<>'"]/g, s => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[s]));
+    }
+    function escapeAttr(str) { return escapeHtml(str); }
+
+    window.editTip = editTip;
+    window.removeTip = removeTip;
+    window.setStatus = setStatus;
+  </script>
 </body>
 </html>
