@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>لوحة الإدارة - A1VIP KORA CODE</title>
+  <title>A1VIP KORA CODE</title>
   <meta name="theme-color" content="#020705" />
   <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,9 +12,19 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <section class="top-affiliate">
+    <div class="container">
+      <h1 class="top-title">🎁 سجل الآن في <b>MELBET</b> واحصل على مكافأة ترحيبية حصرية!</h1>
+      <div class="top-actions">
+        <a href="#hero" class="btn-gift">احصل على الهدية ←</a>
+        <div class="chip-black">A1VIP</div>
+      </div>
+    </div>
+  </section>
+
   <header class="site-header">
     <div class="container">
-      <button class="hamburger" onclick="location.href='index.html'">←</button>
+      <button class="hamburger" data-open-drawer>☰</button>
       <div class="brand">
         <div class="brand-text">
           <div class="brand-line1">A1VIP <span class="green">KORA</span></div>
@@ -25,60 +35,72 @@
     </div>
   </header>
 
-  <main class="container admin-wrap">
-    <div class="admin-shell" id="loginView">
-      <h1 class="admin-title">🔐 صفحة الإدارة</h1>
-      <div class="login-box">
-        <label>كلمة السر</label>
-        <input type="password" id="adminPassword" placeholder="اكتب كلمة المرور" />
-        <div class="spacer"></div>
-        <button class="admin-btn green" onclick="loginAdmin()">دخول</button>
-        <div id="loginError" class="error hide">كلمة السر غير صحيحة</div>
+  <div class="drawer" id="drawer">
+    <div class="drawer-panel">
+      <button class="drawer-close" data-close-drawer>×</button>
+      <div class="drawer-nav">
+        <a class="drawer-link" href="index.html">⚽ الرئيسية</a>
+        <a class="drawer-link" href="winners.html">🏆 الأكواد الرابحة</a>
+        <a class="drawer-link gold" href="admin.html">🔐 لوحة الإدارة</a>
       </div>
     </div>
+  </div>
 
-    <div class="admin-shell hide" id="panelView">
-      <h1 class="admin-title">⚙️ لوحة الإدارة</h1>
-
-      <div class="form-box">
-        <input type="hidden" id="editId" />
-        <label>الكود</label>
-        <input id="code" placeholder="مثال: DQU6X" />
-        <div class="grid-2">
-          <div>
-            <label>نسبة الربح</label>
-            <input id="odds" type="number" step="0.01" placeholder="مثال: 1.66" />
-          </div>
-          <div>
-            <label>الترتيب / الرقم الظاهر</label>
-            <input id="order" type="number" step="1" placeholder="1" />
-          </div>
+  <main class="container">
+    <section class="section" id="hero">
+      <div class="hero-card">
+        <div class="hero-pill">⚡ توقعات يومية مضمونة بنسبة 100%</div>
+        <h2 class="hero-title">سجّل الآن في <span class="melbet">MELBET</span></h2>
+        <div class="promo-row">
+          <div class="promo-box">A1VIP</div>
+          <div class="hero-sub">ببروموكود</div>
         </div>
-        <label>الحالة</label>
-        <select id="status">
-          <option value="active">متاح</option>
-          <option value="won">رابح</option>
-          <option value="lost">خاسر</option>
-        </select>
-        <label>رابط صورة الكود</label>
-        <input id="ticketImage" placeholder="الصق رابط الصورة هنا" />
-        <label>رابط صورة إثبات الربح</label>
-        <input id="proofImage" placeholder="الصق رابط الصورة هنا" />
-        <div class="helper">لو لسه ماعندكش صور، سيبها فاضية وكمّل عادي.</div>
-        <div class="spacer"></div>
-        <div class="grid-2">
-          <button class="admin-btn green" onclick="saveForm()">حفظ الكود</button>
-          <button class="admin-btn dark" onclick="resetForm()">تفريغ الحقول</button>
+        <div class="hero-copy">
+          واحصل على مكافأة ترحيبية حصرية 🎁<br>
+          عند التسجيل للحصول على المكافأة اكتب بروموكود <span class="gold">A1VIP</span>
+          في خانه الرمز الترويجي أو <span class="gold">PROMOCODE</span> للحصول على مكافأة مالية حصرية لك
+          وأبدا الرهان على توقعاتنا المضمونة بنسبة <span class="green">100%</span>
         </div>
-        <div id="saveMsg" class="success hide">تم الحفظ بنجاح</div>
+        <a class="cta-primary" href="${GIFT_URL}" onclick="event.currentTarget.href=GIFT_URL" target="_blank" rel="noopener">سجل ب بروموكود A1VIP واحصل على الهدية الآن 🎁</a>
       </div>
+    </section>
 
-      <div class="form-box">
-        <h3 style="margin:0 0 12px;font-size:28px">📋 الأكواد الحالية</h3>
-        <div class="admin-list" id="adminList"></div>
+    <section class="section">
+      <div class="section-heading">
+        <h2>⚽ أكواد اليوم المتاحة</h2>
+        <p>انسخ الكود واستخدمه مباشر في تطبيق MELBET</p>
       </div>
-    </div>
+      <div id="activeCodes" class="cards"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>💸 أكواد اليوم الرابحة</h2>
+        <p>🏆 الأكواد الي كسبت النهاردة</p>
+      </div>
+      <div id="wonTodayCodes" class="cards"></div>
+    </section>
+
+    <section class="section">
+      <div class="richtext-card">
+        <h3 class="richtext-title">لم تسجّل في <span class="gold">Melbet</span> بعد؟</h3>
+        <div class="richtext">
+          سجّل الآن واحصل على مكافأة مالية كبيرة عند التسجيل!<br>
+          للحصول على المكافأة استخدم بروموكود <span class="gold">A1VIP</span> واحصل على مكافأة حصرية
+          وابدأ الرهان على توقعاتنا المضمونة بنسبة <span class="green">100%</span>
+        </div>
+        <a class="cta-primary" style="margin-top:22px" href="${GIFT_URL}" onclick="event.currentTarget.href=GIFT_URL" target="_blank" rel="noopener">🎁 ابدأ الآن واحصل على الهدية</a>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="footer-brand">A1VIP <span class="green">KORA</span> <span class="gold">CODE</span></div>
+      <div class="footer-copy">جميع الحقوق محفوظة ل A1VIP KORA CODE 2026</div>
+      <a class="footer-action" href="${TELEGRAM_URL}" onclick="event.currentTarget.href=TELEGRAM_URL" target="_blank" rel="noopener">📣 انضم إلى قناة تيليجرام</a>
+    </footer>
   </main>
+
+  <a class="telegram-float" href="${TELEGRAM_URL}" onclick="event.currentTarget.href=TELEGRAM_URL" target="_blank" rel="noopener">✈️</a>
 
 <script>
 
@@ -195,121 +217,44 @@ function cardHtml(code, winner=false){
   </article>`;
 }
 
-function loginAdmin(){
-  const pass = document.getElementById('adminPassword').value;
-  const error = document.getElementById('loginError');
-  if(pass === ADMIN_PASSWORD){
-    sessionStorage.setItem('a1vip_admin_ok','1');
-    document.getElementById('loginView').classList.add('hide');
-    document.getElementById('panelView').classList.remove('hide');
-    renderAdminList();
-  } else {
-    error.classList.remove('hide');
-  }
-}
-function ensureAdmin(){
-  if(sessionStorage.getItem('a1vip_admin_ok')==='1'){
-    document.getElementById('loginView').classList.add('hide');
-    document.getElementById('panelView').classList.remove('hide');
-    renderAdminList();
-  }
-}
-function resetForm(){
-  document.getElementById('editId').value = '';
-  document.getElementById('code').value = '';
-  document.getElementById('odds').value = '';
-  document.getElementById('order').value = '';
-  document.getElementById('status').value = 'active';
-  document.getElementById('ticketImage').value = '';
-  document.getElementById('proofImage').value = '';
-}
-function saveForm(){
-  const code = document.getElementById('code').value.trim();
-  const odds = parseFloat(document.getElementById('odds').value || '0');
-  const order = parseInt(document.getElementById('order').value || '1');
-  const status = document.getElementById('status').value;
-  const ticketImage = document.getElementById('ticketImage').value.trim();
-  const proofImage = document.getElementById('proofImage').value.trim();
-  const editId = document.getElementById('editId').value;
-  if(!code || !odds){
-    alert('اكتب الكود ونسبة الربح أولاً');
-    return;
-  }
+function seedIfEmpty(){
   const codes = loadCodes();
+  if(codes.length) return;
   const now = new Date().toISOString();
-  if(editId){
-    const idx = codes.findIndex(c=>String(c.id)===String(editId));
-    if(idx>-1){
-      codes[idx] = {
-        ...codes[idx],
-        code, odds, order, status, ticketImage, proofImage,
-        wonAt: status==='won' ? (codes[idx].wonAt || now) : ''
-      };
-    }
-  } else {
-    codes.unshift({
-      id:uid(), code, odds, order, status, ticketImage, proofImage,
+  saveCodes([
+    {
+      id:uid(), order:1, code:"29Y6X", odds:2.25, status:"active",
+      ticketImage:"",
+      proofImage:"",
+      createdAt:now
+    },
+    {
+      id:uid(), order:1, code:"DQU6X", odds:1.66, status:"won",
+      ticketImage:"",
+      proofImage:"",
       createdAt:now,
-      wonAt: status==='won' ? now : ''
-    });
-  }
-  saveCodes(codes);
-  document.getElementById('saveMsg').classList.remove('hide');
-  setTimeout(()=>document.getElementById('saveMsg').classList.add('hide'),1400);
-  resetForm();
-  renderAdminList();
+      wonAt:now
+    }
+  ]);
 }
-function editCode(id){
-  const c = loadCodes().find(x=>String(x.id)===String(id));
-  if(!c) return;
-  document.getElementById('editId').value = c.id;
-  document.getElementById('code').value = c.code;
-  document.getElementById('odds').value = c.odds;
-  document.getElementById('order').value = c.order || 1;
-  document.getElementById('status').value = c.status;
-  document.getElementById('ticketImage').value = c.ticketImage || '';
-  document.getElementById('proofImage').value = c.proofImage || '';
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-function setStatus(id,status){
+function renderHome(){
+  seedIfEmpty();
   const codes = loadCodes();
-  const c = codes.find(x=>String(x.id)===String(id));
-  if(!c) return;
-  c.status = status;
-  if(status==='won' && !c.wonAt) c.wonAt = new Date().toISOString();
-  saveCodes(codes);
-  renderAdminList();
+  const active = activeTodayCodes(codes);
+  const wonToday = wonTodayCodes(codes);
+
+  const activeWrap = document.getElementById('activeCodes');
+  const wonWrap = document.getElementById('wonTodayCodes');
+
+  activeWrap.innerHTML = active.length
+    ? active.map(c=>cardHtml(c,false)).join('')
+    : `<div class="ticket-empty" style="border-radius:28px;background:#05110b;border:1px solid rgba(0,255,140,.12)">لا توجد أكواد متاحة اليوم بعد</div>`;
+
+  wonWrap.innerHTML = wonToday.length
+    ? wonToday.map(c=>cardHtml(c,true)).join('')
+    : `<div class="ticket-empty" style="border-radius:28px;background:#05110b;border:1px solid rgba(0,255,140,.12)">لا توجد أكواد رابحة اليوم حتى الآن</div>`;
 }
-function removeCode(id){
-  if(!confirm('حذف الكود؟')) return;
-  saveCodes(loadCodes().filter(c=>String(c.id)!==String(id)));
-  renderAdminList();
-}
-function renderAdminList(){
-  const wrap = document.getElementById('adminList');
-  const codes = loadCodes();
-  if(!codes.length){
-    wrap.innerHTML = `<div class="ticket-empty" style="border-radius:24px;background:#05110b;border:1px solid rgba(0,255,140,.12)">لا توجد أكواد حالياً</div>`;
-    return;
-  }
-  wrap.innerHTML = codes.map(c=>`
-    <div class="admin-item">
-      <h4>${c.code} - x${Number(c.odds).toFixed(2)}</h4>
-      <div class="meta-small">
-        الحالة: ${c.status}<br>
-        تاريخ الإضافة: ${formatDateArabic(c.createdAt)}
-      </div>
-      <div class="spacer"></div>
-      <div class="actions">
-        <button class="admin-btn gold" onclick="editCode('${c.id}')">تعديل</button>
-        <button class="admin-btn dark" onclick="removeCode('${c.id}')">حذف</button>
-        <button class="admin-btn green" onclick="setStatus('${c.id}','active')">متاح</button>
-        <button class="admin-btn green" onclick="setStatus('${c.id}','won')">رابح</button>
-      </div>
-    </div>
-  `).join('');
-}
-ensureAdmin();
+renderHome();
 </script>
 </body>
 </html>
