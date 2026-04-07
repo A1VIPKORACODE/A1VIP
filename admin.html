@@ -2,102 +2,314 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>لوحة الإدارة - A1VIP KORA CODE</title>
-  <meta name="theme-color" content="#030a08" />
-  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <meta name="theme-color" content="#020705" />
+  <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;800;900&family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body data-page="admin">
+<body>
   <header class="site-header">
-    <div class="container header-wrap">
+    <div class="container">
+      <button class="hamburger" onclick="location.href='index.html'">←</button>
       <div class="brand">
-        <div class="brand-logo"><span>⚙️</span></div>
         <div class="brand-text">
-          <div class="main">A1VIP <span class="green">ADMIN</span></div>
-          <span class="sub">PANEL</span>
+          <div class="brand-line1">A1VIP <span class="green">KORA</span></div>
+          <div class="brand-line2">CODE</div>
         </div>
+        <div class="brand-logo">⚽</div>
       </div>
-      <div style="font-size:24px;color:#94a39b;font-weight:800">/admin.html</div>
     </div>
   </header>
-  <main class="page admin-wrap">
-    <div class="container">
-      <div class="admin-box login-box" id="loginBox">
-        <div class="section-head">
-          <h1 class="section-title glow-green">تسجيل دخول الإدارة</h1>
-          <p class="section-subtitle">الدخول يتم فقط من خلال الرابط المباشر للصفحة</p>
+
+  <main class="container admin-wrap">
+    <div class="admin-shell" id="loginView">
+      <h1 class="admin-title">🔐 صفحة الإدارة</h1>
+      <div class="login-box">
+        <label>كلمة السر</label>
+        <input type="password" id="adminPassword" placeholder="اكتب كلمة المرور" />
+        <div class="spacer"></div>
+        <button class="admin-btn green" onclick="loginAdmin()">دخول</button>
+        <div id="loginError" class="error hide">كلمة السر غير صحيحة</div>
+      </div>
+    </div>
+
+    <div class="admin-shell hide" id="panelView">
+      <h1 class="admin-title">⚙️ لوحة الإدارة</h1>
+
+      <div class="form-box">
+        <input type="hidden" id="editId" />
+        <label>الكود</label>
+        <input id="code" placeholder="مثال: DQU6X" />
+        <div class="grid-2">
+          <div>
+            <label>نسبة الربح</label>
+            <input id="odds" type="number" step="0.01" placeholder="مثال: 1.66" />
+          </div>
+          <div>
+            <label>الترتيب / الرقم الظاهر</label>
+            <input id="order" type="number" step="1" placeholder="1" />
+          </div>
         </div>
-        <div class="form-row">
-          <label>كلمة السر</label>
-          <input class="input" id="adminPass" type="password" placeholder="اكتب كلمة السر" />
+        <label>الحالة</label>
+        <select id="status">
+          <option value="active">متاح</option>
+          <option value="won">رابح</option>
+          <option value="lost">خاسر</option>
+        </select>
+        <label>رابط صورة الكود</label>
+        <input id="ticketImage" placeholder="الصق رابط الصورة هنا" />
+        <label>رابط صورة إثبات الربح</label>
+        <input id="proofImage" placeholder="الصق رابط الصورة هنا" />
+        <div class="helper">لو لسه ماعندكش صور، سيبها فاضية وكمّل عادي.</div>
+        <div class="spacer"></div>
+        <div class="grid-2">
+          <button class="admin-btn green" onclick="saveForm()">حفظ الكود</button>
+          <button class="admin-btn dark" onclick="resetForm()">تفريغ الحقول</button>
         </div>
-        <div class="admin-actions" style="margin-top:16px">
-          <button class="btn btn-main btn-gold" id="loginBtn">دخول</button>
-        </div>
+        <div id="saveMsg" class="success hide">تم الحفظ بنجاح</div>
       </div>
 
-      <div class="hidden" id="adminPanel">
-        <div class="admin-box">
-          <div class="section-head">
-            <h1 class="section-title glow-green">إضافة / تعديل الأكواد</h1>
-            <p class="section-subtitle">أضف الأكواد المتاحة أو حوّلها إلى رابحة من هنا</p>
-          </div>
-          <form id="codeForm" class="form-grid">
-            <div class="form-row">
-              <label>الكود</label>
-              <input class="input" id="tipCode" required placeholder="مثال: DQU6X" />
-            </div>
-            <div class="form-row">
-              <label>نسبة الربح</label>
-              <input class="input" id="odds" required placeholder="مثال: 1.66" />
-            </div>
-            <div class="form-row">
-              <label>تاريخ الكود</label>
-              <input class="input" id="dayDate" type="date" />
-            </div>
-            <div class="form-row">
-              <label>الحالة</label>
-              <select class="select" id="status">
-                <option value="active">متاح</option>
-                <option value="won">رابح</option>
-                <option value="lost">خاسر</option>
-              </select>
-            </div>
-            <div class="form-row">
-              <label>ملاحظة أسفل الكود</label>
-              <textarea class="textarea" id="note" placeholder="مثال: الكود يشتغل على الناس المسجلة ببروموكود A1VIP فقط"></textarea>
-            </div>
-            <div class="form-row">
-              <label>صورة الكود</label>
-              <input class="input" id="codeImageFile" type="file" accept="image/*" />
-            </div>
-            <div class="form-row">
-              <label>صورة إثبات الربح</label>
-              <input class="input" id="proofImageFile" type="file" accept="image/*" />
-            </div>
-            <div class="admin-actions">
-              <button class="btn btn-main btn-gold" type="submit" id="submitLabel">إضافة الكود</button>
-              <button class="btn btn-main btn-dark" type="button" id="logoutBtn">تسجيل خروج</button>
-            </div>
-          </form>
-        </div>
-
-        <div class="section"></div>
-
-        <div class="admin-box">
-          <div class="section-head">
-            <h2 class="section-title">كل الأكواد</h2>
-            <p class="section-subtitle">تعديل، تحويل لرابح، أو حذف</p>
-          </div>
-          <div class="admin-list" id="adminList"></div>
-        </div>
+      <div class="form-box">
+        <h3 style="margin:0 0 12px;font-size:28px">📋 الأكواد الحالية</h3>
+        <div class="admin-list" id="adminList"></div>
       </div>
     </div>
   </main>
-  <script src="app.js"></script>
+
+<script>
+
+const STORAGE_KEY = "a1vip_codes_v1";
+const ADMIN_PASSWORD = "AbanoubSamirRANDAHANY907&ANGLIabanoub907@#$";
+const GIFT_URL = "#";
+const TELEGRAM_URL = "https://t.me/+41dt_ow6bGY4YWNk";
+const GUIDE_URL = "#";
+
+function loadCodes(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  let codes = [];
+  if(raw){
+    try{ codes = JSON.parse(raw)||[]; }catch(e){ codes=[]; }
+  }
+  // remove won codes older than 30 days
+  const now = new Date();
+  codes = codes.filter(c => {
+    if(c.status !== 'won') return true;
+    const d = c.wonAt ? new Date(c.wonAt) : new Date(c.createdAt || Date.now());
+    const diff = (now - d)/(1000*60*60*24);
+    return diff <= 30;
+  });
+  saveCodes(codes);
+  return codes;
+}
+function saveCodes(codes){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(codes));
+}
+function uid(){ return Date.now() + Math.floor(Math.random()*10000); }
+function formatDateArabic(dateString){
+  const d = new Date(dateString);
+  return new Intl.DateTimeFormat('ar-EG', {weekday:'long', day:'numeric', month:'long', year:'numeric'}).format(d);
+}
+function dayKey(dateString){
+  const d = new Date(dateString);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,'0')+"-"+String(d.getDate()).padStart(2,'0');
+}
+function sumOdds(codes){
+  return codes.reduce((s,c)=>s + (parseFloat(c.odds)||0),0);
+}
+function statsFor(codes){
+  const total = codes.length;
+  const won = codes.filter(c=>c.status==='won').length;
+  const sOdds = codes.reduce((s,c)=>s+(parseFloat(c.odds)||0),0);
+  const profit = Math.round(1000*sOdds);
+  return {total, won, sumOdds: Number(sOdds.toFixed(2)), profit};
+}
+function groupByDay(codes){
+  const groups = {};
+  codes.forEach(c=>{
+    const key = dayKey(c.wonAt || c.createdAt || Date.now());
+    groups[key] ??= [];
+    groups[key].push(c);
+  });
+  return Object.entries(groups).sort((a,b)=>new Date(b[0]) - new Date(a[0]));
+}
+function activeTodayCodes(codes){
+  const today = dayKey(new Date());
+  return codes.filter(c=>c.status==='active' && dayKey(c.createdAt||Date.now())===today);
+}
+function wonTodayCodes(codes){
+  const today = dayKey(new Date());
+  return codes.filter(c=>c.status==='won' && dayKey(c.wonAt||c.createdAt||Date.now())===today);
+}
+function yesterdayWonCodes(codes){
+  const y = new Date();
+  y.setDate(y.getDate()-1);
+  const key = dayKey(y);
+  return codes.filter(c=>c.status==='won' && dayKey(c.wonAt||c.createdAt||Date.now())===key);
+}
+function last30WonCodes(codes){
+  const now = new Date();
+  return codes.filter(c=>{
+    if(c.status!=='won') return false;
+    const d = new Date(c.wonAt||c.createdAt||Date.now());
+    const diff = (now-d)/(1000*60*60*24);
+    return diff <= 30;
+  });
+}
+function openDrawer(){ document.getElementById('drawer')?.classList.add('open'); }
+function closeDrawer(){ document.getElementById('drawer')?.classList.remove('open'); }
+document.addEventListener('click', (e)=>{
+  if(e.target.matches('[data-open-drawer]')) openDrawer();
+  if(e.target.matches('[data-close-drawer]')) closeDrawer();
+  if(e.target.id==='drawer') closeDrawer();
+});
+
+function cardHtml(code, winner=false){
+  const img = winner ? code.proofImage : code.ticketImage;
+  const imgBlock = img
+    ? `<div class="ticket-wrap"><img src="${img}" alt=""></div>`
+    : `<div class="ticket-wrap"><div class="ticket-empty">${winner ? 'أضف صورة إثبات الربح من لوحة الإدارة' : 'أضف صورة الكود من لوحة الإدارة'}</div></div>`;
+  const count = code.order || 1;
+  return `
+  <article class="code-card">
+    <div class="code-head">
+      <div class="badge ${winner ? '' : 'gold'}">${winner ? '✅ رابح' : '⚡ متاح'}</div>
+      <div class="count-badge">${count}</div>
+    </div>
+    <div class="code-id">${code.code}</div>
+    <div class="code-meta">
+      <div class="odds-box">
+        <div class="value">x${Number(code.odds||0).toFixed(2)}</div>
+      </div>
+      <div class="proof-label">${winner ? '📸 إثبات الربح' : 'نسبة ربح الكود'}</div>
+    </div>
+    ${imgBlock}
+    <div class="card-footer">
+      ${winner ? `<div class="date-line" style="text-align:left">ربح في: ${new Intl.DateTimeFormat('ar-EG',{hour:'numeric',minute:'2-digit'}).format(new Date(code.wonAt||Date.now()))}</div>` :
+      `<button class="copy-btn" onclick="navigator.clipboard.writeText('${code.code}');this.innerText='✅ تم النسخ';setTimeout(()=>this.innerText='📋 انسخ الكود',1800)">📋 انسخ الكود</button>
+      <a class="play-btn" href="${GIFT_URL}" target="_blank" rel="noopener">🎰 العب الآن على Melbet</a>`}
+    </div>
+  </article>`;
+}
+
+function loginAdmin(){
+  const pass = document.getElementById('adminPassword').value;
+  const error = document.getElementById('loginError');
+  if(pass === ADMIN_PASSWORD){
+    sessionStorage.setItem('a1vip_admin_ok','1');
+    document.getElementById('loginView').classList.add('hide');
+    document.getElementById('panelView').classList.remove('hide');
+    renderAdminList();
+  } else {
+    error.classList.remove('hide');
+  }
+}
+function ensureAdmin(){
+  if(sessionStorage.getItem('a1vip_admin_ok')==='1'){
+    document.getElementById('loginView').classList.add('hide');
+    document.getElementById('panelView').classList.remove('hide');
+    renderAdminList();
+  }
+}
+function resetForm(){
+  document.getElementById('editId').value = '';
+  document.getElementById('code').value = '';
+  document.getElementById('odds').value = '';
+  document.getElementById('order').value = '';
+  document.getElementById('status').value = 'active';
+  document.getElementById('ticketImage').value = '';
+  document.getElementById('proofImage').value = '';
+}
+function saveForm(){
+  const code = document.getElementById('code').value.trim();
+  const odds = parseFloat(document.getElementById('odds').value || '0');
+  const order = parseInt(document.getElementById('order').value || '1');
+  const status = document.getElementById('status').value;
+  const ticketImage = document.getElementById('ticketImage').value.trim();
+  const proofImage = document.getElementById('proofImage').value.trim();
+  const editId = document.getElementById('editId').value;
+  if(!code || !odds){
+    alert('اكتب الكود ونسبة الربح أولاً');
+    return;
+  }
+  const codes = loadCodes();
+  const now = new Date().toISOString();
+  if(editId){
+    const idx = codes.findIndex(c=>String(c.id)===String(editId));
+    if(idx>-1){
+      codes[idx] = {
+        ...codes[idx],
+        code, odds, order, status, ticketImage, proofImage,
+        wonAt: status==='won' ? (codes[idx].wonAt || now) : ''
+      };
+    }
+  } else {
+    codes.unshift({
+      id:uid(), code, odds, order, status, ticketImage, proofImage,
+      createdAt:now,
+      wonAt: status==='won' ? now : ''
+    });
+  }
+  saveCodes(codes);
+  document.getElementById('saveMsg').classList.remove('hide');
+  setTimeout(()=>document.getElementById('saveMsg').classList.add('hide'),1400);
+  resetForm();
+  renderAdminList();
+}
+function editCode(id){
+  const c = loadCodes().find(x=>String(x.id)===String(id));
+  if(!c) return;
+  document.getElementById('editId').value = c.id;
+  document.getElementById('code').value = c.code;
+  document.getElementById('odds').value = c.odds;
+  document.getElementById('order').value = c.order || 1;
+  document.getElementById('status').value = c.status;
+  document.getElementById('ticketImage').value = c.ticketImage || '';
+  document.getElementById('proofImage').value = c.proofImage || '';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function setStatus(id,status){
+  const codes = loadCodes();
+  const c = codes.find(x=>String(x.id)===String(id));
+  if(!c) return;
+  c.status = status;
+  if(status==='won' && !c.wonAt) c.wonAt = new Date().toISOString();
+  saveCodes(codes);
+  renderAdminList();
+}
+function removeCode(id){
+  if(!confirm('حذف الكود؟')) return;
+  saveCodes(loadCodes().filter(c=>String(c.id)!==String(id)));
+  renderAdminList();
+}
+function renderAdminList(){
+  const wrap = document.getElementById('adminList');
+  const codes = loadCodes();
+  if(!codes.length){
+    wrap.innerHTML = `<div class="ticket-empty" style="border-radius:24px;background:#05110b;border:1px solid rgba(0,255,140,.12)">لا توجد أكواد حالياً</div>`;
+    return;
+  }
+  wrap.innerHTML = codes.map(c=>`
+    <div class="admin-item">
+      <h4>${c.code} - x${Number(c.odds).toFixed(2)}</h4>
+      <div class="meta-small">
+        الحالة: ${c.status}<br>
+        تاريخ الإضافة: ${formatDateArabic(c.createdAt)}
+      </div>
+      <div class="spacer"></div>
+      <div class="actions">
+        <button class="admin-btn gold" onclick="editCode('${c.id}')">تعديل</button>
+        <button class="admin-btn dark" onclick="removeCode('${c.id}')">حذف</button>
+        <button class="admin-btn green" onclick="setStatus('${c.id}','active')">متاح</button>
+        <button class="admin-btn green" onclick="setStatus('${c.id}','won')">رابح</button>
+      </div>
+    </div>
+  `).join('');
+}
+ensureAdmin();
+</script>
 </body>
 </html>
