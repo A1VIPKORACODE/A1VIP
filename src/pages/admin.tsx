@@ -5,13 +5,15 @@ const ADMIN_PASSWORD = 'AbanoubSamirRANDAHANY907&ANGLIabanoub907@#$';
 const STORAGE_KEY = 'admin_token_expires';
 const BUCKET = 'codes';
 
+type CodeStatus = 'active' | 'won' | 'refund';
+
 type CodeItem = {
   id: string;
   description: string | null;
   tip_outcome: string | null;
   tip_code: string;
   odds: number;
-  status: 'active' | 'won' | 'refund';
+  status: CodeStatus;
   code_image_url: string | null;
   proof_image_url: string | null;
   proof_type: string | null;
@@ -31,6 +33,12 @@ type DailyStat = {
 
 function formatOdds(value: number) {
   return Number(value || 0).toFixed(2);
+}
+
+function addOneDay(dateStr: string) {
+  const d = new Date(`${dateStr}T00:00:00`);
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().split('T')[0];
 }
 
 function getPublicUrl(path?: string | null) {
@@ -78,6 +86,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
 
   const [codes, setCodes] = useState<CodeItem[]>([]);
+  const [wonCodes, setWonCodes] = useState<CodeItem[]>([]);
   const [dailyStats, setDailyStats] = useState<DailyStat | null>(null);
   const [currentDay, setCurrentDay] = useState('');
 
@@ -87,6 +96,7 @@ export default function AdminPage() {
   const [tipCode, setTipCode] = useState('');
   const [odds, setOdds] = useState('');
   const [betImage, setBetImage] = useState<File | null>(null);
+  const [betImagePreview, setBetImagePreview] = useState<string | null>(null);
   const [savingCode, setSavingCode] = useState(false);
 
   useEffect(() => {
@@ -101,6 +111,12 @@ export default function AdminPage() {
       loadAll();
     }
   }, [authorized]);
+
+  useEffect(() => {
+    return () => {
+      if (betImagePreview) URL.revokeObjectURL(betImagePreview);
+    };
+  }, [betImagePreview]);
 
   async function ensureCurrentDay() {
     const { data, error } = await supabase.from('app_state').select('*').eq('key', 'current_day').maybeSingle();
@@ -146,7 +162,7 @@ export default function AdminPage() {
 
     const rows = (data || []) as CodeItem[];
     const totalCodes = rows.length;
-    const wonCodes = rows.filter((c) => c.status === 'won' || c.status === 'refund').length;
+    const wonCount = rows.filter((c) => c.status === 'won' || c.status === 'refund').length;
     const combinedOdds = rows.reduce((sum, c) => sum + Number(c.odds || 0), 0);
 
     const { error: upError } = await supabase
@@ -156,7 +172,7 @@ export default function AdminPage() {
           {
             stat_date: day,
             total_codes: totalCodes,
-            won_codes_count: wonCodes,
+            won_codes_count: wonCount,
             combined_odds: Number(combinedOdds.toFixed(2)),
             is_finalized: false,
           },
@@ -178,23 +194,22 @@ export default function AdminPage() {
       await ensureDailyStats(day);
       await recalcDayStats(day);
 
-      const { data: codesData, error: codesError } = await supabase
-        .from('codes')
-        .select('*')
-        .eq('day_date', day)
-        .order('created_at', { ascending: false });
+      const [
+        { data: activeData, error: activeError },
+        { data: wonData, error: wonError },
+        { data: statsData, error: statsError },
+      ] = await Promise.all([
+        supabase.from('codes').select('*').eq('day_date', day).eq('status', 'active').order('created_at', { ascending: false }),
+        supabase.from('codes').select('*').eq('day_date', day).in('status', ['won', 'refund']).order('won_at', { ascending: false }),
+        supabase.from('daily_stats').select('*').eq('stat_date', day).maybeSingle(),
+      ]);
 
-      if (codesError) throw codesError;
-
-      const { data: statsData, error: statsError } = await supabase
-        .from('daily_stats')
-        .select('*')
-        .eq('stat_date', day)
-        .maybeSingle();
-
+      if (activeError) throw activeError;
+      if (wonError) throw wonError;
       if (statsError) throw statsError;
 
-      setCodes((codesData || []) as CodeItem[]);
+      setCodes((activeData || []) as CodeItem[]);
+      setWonCodes((wonData || []) as CodeItem[]);
       setDailyStats((statsData as DailyStat) || null);
     } catch (err: any) {
       console.error('LOAD ALL ERROR:', err);
@@ -229,12 +244,17 @@ export default function AdminPage() {
     setTipCode('');
     setOdds('');
     setBetImage(null);
+    if (betImagePreview) URL.revokeObjectURL(betImagePreview);
+    setBetImagePreview(null);
     setShowAddForm(false);
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     setBetImage(file);
+
+    if (betImagePreview) URL.revokeObjectURL(betImagePreview);
+    setBetImagePreview(file ? URL.createObjectURL(file) : null);
   };
 
   const handleAddCode = async (e: React.FormEvent) => {
@@ -366,7 +386,7 @@ export default function AdminPage() {
 
       if (finalizeError) throw finalizeError;
 
-      const newDay = `manual-${Date.now()}`;
+      const newDay = addOneDay(currentDay);
 
       const { error: appStateError } = await supabase
         .from('app_state')
@@ -375,20 +395,11 @@ export default function AdminPage() {
 
       if (appStateError) throw appStateError;
 
-      const { error: newStatsError } = await supabase.from('daily_stats').insert([
-        {
-          stat_date: newDay,
-          total_codes: 0,
-          won_codes_count: 0,
-          combined_odds: 0,
-          is_finalized: false,
-        },
-      ]);
-
-      if (newStatsError) throw newStatsError;
+      await ensureDailyStats(newDay);
 
       setCurrentDay(newDay);
       setCodes([]);
+      setWonCodes([]);
       setDailyStats({
         id: '',
         stat_date: newDay,
@@ -430,9 +441,7 @@ export default function AdminPage() {
             className="mb-4 w-full rounded-2xl border border-green-900/50 bg-black/40 px-4 py-3 text-white outline-none"
           />
 
-          <button className="w-full rounded-2xl bg-green-500 py-3 text-xl font-black text-black">
-            دخول
-          </button>
+          <button className="w-full rounded-2xl bg-green-500 py-3 text-xl font-black text-black">دخول</button>
 
           {message && <p className="mt-4 text-center font-bold text-red-400">{message}</p>}
         </form>
@@ -519,7 +528,15 @@ export default function AdminPage() {
                   📸 رفع صورة للكود
                   <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                 </label>
+
                 {betImage && <p className="mt-3 text-green-400">{betImage.name}</p>}
+
+                {betImagePreview && (
+                  <div className="mt-4 overflow-hidden rounded-[28px] border border-green-900/40 bg-black/20 p-4">
+                    <p className="mb-3 text-xl font-bold text-gray-300">معاينة الصورة قبل الإضافة</p>
+                    <img src={betImagePreview} alt="معاينة صورة الكود" className="mx-auto block max-h-[500px] w-full rounded-2xl object-contain" />
+                  </div>
+                )}
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -639,6 +656,73 @@ export default function AdminPage() {
                       🗑️ حذف
                     </button>
                   </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <h2 className="mb-6 text-4xl font-black">🏆 أكواد اليوم الرابحة ({wonCodes.length})</h2>
+
+          {loading ? (
+            <div className="rounded-3xl border border-green-900/40 bg-black/30 p-10 text-center text-2xl text-gray-400">
+              جاري التحميل...
+            </div>
+          ) : wonCodes.length === 0 ? (
+            <div className="rounded-3xl border border-green-900/40 bg-black/30 p-10 text-center text-2xl text-gray-400">
+              لا توجد أكواد رابحة اليوم
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {wonCodes.map((code) => (
+                <div
+                  key={code.id}
+                  className="rounded-[32px] border border-green-900/50 bg-[radial-gradient(circle_at_top,#0d2210,#071107)] p-6 shadow-[0_0_40px_rgba(0,255,120,0.08)]"
+                >
+                  <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+                    <div className="rounded-2xl border border-green-500/40 bg-green-500/10 px-5 py-3 text-3xl font-black text-green-400">
+                      {code.tip_outcome || 'بدون نوع'}
+                    </div>
+
+                    <div className="text-center">
+                      <div className="text-5xl font-black tracking-[0.18em]">{code.tip_code}</div>
+                    </div>
+
+                    <div className="rounded-2xl bg-green-500 px-5 py-3 text-2xl font-black text-black">
+                      {code.status === 'refund' ? '📥 استرداد' : '✅ كسب'}
+                    </div>
+                  </div>
+
+                  {code.description && (
+                    <div className="mb-5 rounded-2xl border border-green-900/40 bg-black/30 px-5 py-4 text-2xl text-gray-300">
+                      {code.description}
+                    </div>
+                  )}
+
+                  {getPublicUrl(code.code_image_url) && (
+                    <div className="mb-4 overflow-hidden rounded-[28px] border border-green-900/40 bg-black/20 p-4">
+                      <p className="mb-3 text-xl font-bold text-gray-300">صورة الرهان</p>
+                      <img
+                        src={getPublicUrl(code.code_image_url)!}
+                        alt="صورة الرهان"
+                        className="mx-auto block max-h-[600px] w-full rounded-2xl object-contain"
+                      />
+                    </div>
+                  )}
+
+                  {getPublicUrl(code.proof_image_url) && (
+                    <div className="overflow-hidden rounded-[28px] border border-green-900/40 bg-black/20 p-4">
+                      <p className="mb-3 text-xl font-bold text-gray-300">
+                        {code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
+                      </p>
+                      <img
+                        src={getPublicUrl(code.proof_image_url)!}
+                        alt={code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
+                        className="mx-auto block max-h-[600px] w-full rounded-2xl object-contain"
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
