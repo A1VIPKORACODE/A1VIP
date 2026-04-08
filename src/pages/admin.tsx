@@ -36,9 +36,10 @@ function formatOdds(value: number) {
 }
 
 function addOneDay(dateStr: string) {
-  const d = new Date(`${dateStr}T00:00:00`);
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().split('T')[0];
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const utcDate = new Date(Date.UTC(year, month - 1, day));
+  utcDate.setUTCDate(utcDate.getUTCDate() + 1);
+  return utcDate.toISOString().slice(0, 10);
 }
 
 function getPublicUrl(path?: string | null) {
@@ -423,41 +424,23 @@ export default function AdminPage() {
 
       const newDay = addOneDay(currentDay);
 
-      const { data: existingState, error: stateReadError } = await supabase
+      const { error: upsertStateError } = await supabase
         .from('app_state')
-        .select('*')
-        .eq('key', 'current_day')
-        .maybeSingle();
+        .upsert([{ key: 'current_day', value: newDay }], { onConflict: 'key' });
 
-      if (stateReadError) throw stateReadError;
-
-      if (existingState) {
-        const { error: updateError } = await supabase
-          .from('app_state')
-          .update({ value: newDay })
-          .eq('key', 'current_day');
-
-        if (updateError) throw updateError;
-      } else {
-        const { error: insertError } = await supabase
-          .from('app_state')
-          .insert([{ key: 'current_day', value: newDay }]);
-
-        if (insertError) throw insertError;
-      }
+      if (upsertStateError) throw upsertStateError;
 
       await ensureDailyStats(newDay);
 
       const { data: verifyState, error: verifyError } = await supabase
         .from('app_state')
-        .select('*')
+        .select('value')
         .eq('key', 'current_day')
-        .maybeSingle();
+        .single();
 
       if (verifyError) throw verifyError;
-
-      if (!verifyState || verifyState.value !== newDay) {
-        throw new Error('فشل حفظ اليوم الجديد في app_state');
+      if (verifyState?.value !== newDay) {
+        throw new Error(`فشل حفظ اليوم الجديد. القيمة الحالية: ${verifyState?.value || 'فارغة'}`);
       }
 
       setCurrentDay(newDay);
