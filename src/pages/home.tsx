@@ -32,6 +32,7 @@ function mapCode(row: any) {
     status: row.status ?? 'active',
     codeImageUrl: getImageUrl(row.code_image_url),
     proofImageUrl: getImageUrl(row.proof_image_url),
+    proofType: row.proof_type ?? null,
     createdAt: row.created_at ?? new Date().toISOString(),
     wonAt: row.won_at ?? null,
     dayDate: row.day_date ?? null,
@@ -145,22 +146,57 @@ export default function HomePage() {
   useEffect(() => {
     let mounted = true;
 
+    async function ensureCurrentDay() {
+      const { data, error } = await supabase.from('app_state').select('*').eq('key', 'current_day').maybeSingle();
+      if (error) throw error;
+
+      if (data?.value) {
+        return data.value as string;
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+      const { error: insertError } = await supabase.from('app_state').insert([{ key: 'current_day', value: today }]);
+      if (insertError) throw insertError;
+      return today;
+    }
+
     async function loadData() {
-      setIsLoading(true);
+      try {
+        setIsLoading(true);
 
-      const [{ data: appState }, { data: activeRows }, { data: wonRows }] = await Promise.all([
-        supabase.from('app_state').select('value').eq('key', 'current_day').maybeSingle(),
-        supabase.from('tip_codes').select('*').eq('status', 'active').order('created_at', { ascending: true }),
-        supabase.from('tip_codes').select('*').eq('status', 'won').order('won_at', { ascending: false }),
-      ]);
+        const currentDay = await ensureCurrentDay();
 
-      if (!mounted) return;
+        const [{ data: activeRows, error: activeError }, { data: wonRows, error: wonError }] = await Promise.all([
+          supabase
+            .from('codes')
+            .select('*')
+            .eq('day_date', currentDay)
+            .eq('status', 'active')
+            .order('created_at', { ascending: true }),
+          supabase
+            .from('codes')
+            .select('*')
+            .eq('day_date', currentDay)
+            .in('status', ['won', 'refund'])
+            .order('won_at', { ascending: false }),
+        ]);
 
-      const currentDay = appState?.value || new Date().toISOString().split('T')[0];
-      setActiveDayStr(currentDay);
-      setCodes((activeRows || []).map(mapCode));
-      setAllWonCodes((wonRows || []).map(mapCode));
-      setIsLoading(false);
+        if (activeError) throw activeError;
+        if (wonError) throw wonError;
+
+        if (!mounted) return;
+
+        setActiveDayStr(currentDay);
+        setCodes((activeRows || []).map(mapCode));
+        setAllWonCodes((wonRows || []).map(mapCode));
+      } catch (err) {
+        console.error('HOME LOAD ERROR:', err);
+        if (!mounted) return;
+        setCodes([]);
+        setAllWonCodes([]);
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
     }
 
     loadData();
@@ -280,7 +316,7 @@ export default function HomePage() {
                     {idx + 1}
                   </div>
                   <div className="bg-green-500 text-black text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">
-                    ✅ رابح
+                    {code.status === 'refund' ? '📥 استرداد' : '✅ رابح'}
                   </div>
                 </div>
 
@@ -298,9 +334,13 @@ export default function HomePage() {
                 {code.proofImageUrl && (
                   <div className="px-4 pt-3 pb-4">
                     <div className="text-xs text-gray-500 mb-2 font-bold" dir="rtl">
-                      📸 إثبات الربح
+                      📸 {code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
                     </div>
-                    <img src={code.proofImageUrl} alt="إثبات الربح" className="w-full h-auto rounded-xl block cursor-pointer hover:opacity-90" />
+                    <img
+                      src={code.proofImageUrl}
+                      alt={code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
+                      className="w-full h-auto rounded-xl block cursor-pointer hover:opacity-90"
+                    />
                   </div>
                 )}
               </div>
