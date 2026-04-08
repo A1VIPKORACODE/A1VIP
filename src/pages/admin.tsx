@@ -57,14 +57,10 @@ function fileName(prefix: string, file: File) {
 
 async function uploadImage(file: File, prefix: string) {
   const path = fileName(prefix, file);
-
-  const { data, error } = await supabase.storage.from(BUCKET).upload(path, file, {
+  const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
     cacheControl: '3600',
     upsert: false,
   });
-
-  console.log('UPLOAD RESULT:', { data, error, bucket: BUCKET, path });
-
   if (error) throw error;
   return path;
 }
@@ -107,9 +103,7 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (authorized) {
-      loadAll();
-    }
+    if (authorized) loadAll();
   }, [authorized]);
 
   useEffect(() => {
@@ -122,11 +116,18 @@ export default function AdminPage() {
     const { data, error } = await supabase.from('app_state').select('*').eq('key', 'current_day').maybeSingle();
     if (error) throw error;
 
-    if (data?.value) {
+    if (data?.value && /^\d{4}-\d{2}-\d{2}$/.test(data.value)) {
       return data.value as string;
     }
 
     const today = new Date().toISOString().split('T')[0];
+
+    if (data?.key === 'current_day') {
+      const { error: updateError } = await supabase.from('app_state').update({ value: today }).eq('key', 'current_day');
+      if (updateError) throw updateError;
+      return today;
+    }
+
     const { error: insertError } = await supabase.from('app_state').insert([{ key: 'current_day', value: today }]);
     if (insertError) throw insertError;
     return today;
@@ -183,10 +184,32 @@ export default function AdminPage() {
     if (upError) throw upError;
   }
 
+  async function cleanupOldWonCodes() {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    const cutoffStr = cutoff.toISOString();
+
+    const { data, error } = await supabase
+      .from('codes')
+      .select('*')
+      .in('status', ['won', 'refund'])
+      .lt('won_at', cutoffStr);
+
+    if (error) return;
+
+    for (const row of data || []) {
+      await removeImage(row.code_image_url);
+      await removeImage(row.proof_image_url);
+      await supabase.from('codes').delete().eq('id', row.id);
+    }
+  }
+
   async function loadAll() {
     try {
       setLoading(true);
       setMessage('');
+
+      await cleanupOldWonCodes();
 
       const day = await ensureCurrentDay();
       setCurrentDay(day);
@@ -212,8 +235,7 @@ export default function AdminPage() {
       setWonCodes((wonData || []) as CodeItem[]);
       setDailyStats((statsData as DailyStat) || null);
     } catch (err: any) {
-      console.error('LOAD ALL ERROR:', err);
-      setMessage(`حصل خطأ أثناء تحميل البيانات: ${err?.message || JSON.stringify(err) || 'unknown error'}`);
+      setMessage(`حصل خطأ أثناء تحميل البيانات: ${err?.message || 'unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -271,24 +293,19 @@ export default function AdminPage() {
 
       const uploadedPath = await uploadImage(betImage, 'bet-images');
 
-      const { data: insertedData, error } = await supabase
-        .from('codes')
-        .insert([
-          {
-            description: description.trim() || null,
-            tip_outcome: tipOutcome.trim() || null,
-            tip_code: tipCode.trim(),
-            odds: Number(odds),
-            status: 'active',
-            code_image_url: uploadedPath,
-            proof_image_url: null,
-            proof_type: null,
-            day_date: currentDay,
-          },
-        ])
-        .select();
-
-      console.log('ADD CODE RESULT:', { insertedData, error, currentDay, uploadedPath });
+      const { error } = await supabase.from('codes').insert([
+        {
+          description: description.trim() || null,
+          tip_outcome: tipOutcome.trim() || null,
+          tip_code: tipCode.trim(),
+          odds: Number(odds),
+          status: 'active',
+          code_image_url: uploadedPath,
+          proof_image_url: null,
+          proof_type: null,
+          day_date: currentDay,
+        },
+      ]);
 
       if (error) throw error;
 
@@ -297,11 +314,27 @@ export default function AdminPage() {
       resetForm();
       setMessage('تمت إضافة الكود بنجاح');
     } catch (err: any) {
-      console.error('ADD CODE ERROR:', err);
-      setMessage(`حصل خطأ أثناء إضافة الكود: ${err?.message || JSON.stringify(err) || 'unknown error'}`);
+      setMessage(`حصل خطأ أثناء إضافة الكود: ${err?.message || 'unknown error'}`);
     } finally {
       setSavingCode(false);
     }
+  };
+
+  const moveCodeLocally = (codeId: string, nextStatus: 'won' | 'refund', proofPath: string) => {
+    setCodes((prev) => {
+      const found = prev.find((c) => c.id === codeId);
+      if (!found) return prev;
+      const updated = {
+        ...found,
+        status: nextStatus,
+        proof_image_url: proofPath,
+        proof_type: nextStatus,
+        won_at: new Date().toISOString(),
+        odds: nextStatus === 'refund' ? 1 : found.odds,
+      };
+      setWonCodes((prevWon) => [updated, ...prevWon]);
+      return prev.filter((c) => c.id !== codeId);
+    });
   };
 
   const handleWinOrRefund = async (code: CodeItem, nextStatus: 'won' | 'refund') => {
@@ -332,15 +365,15 @@ export default function AdminPage() {
         const { error } = await supabase.from('codes').update(payload).eq('id', code.id);
         if (error) throw error;
 
+        moveCodeLocally(code.id, nextStatus, uploadedPath);
         await recalcDayStats(currentDay);
         await loadAll();
         setMessage(nextStatus === 'won' ? 'تم تعليم الكود كرابح' : 'تم تعليم الكود كمسترد');
       } catch (err: any) {
-        console.error('WIN/REFUND ERROR:', err);
         setMessage(
           nextStatus === 'won'
-            ? `حصل خطأ أثناء رفع إثبات الكسب: ${err?.message || JSON.stringify(err) || 'unknown error'}`
-            : `حصل خطأ أثناء رفع إثبات الاسترداد: ${err?.message || JSON.stringify(err) || 'unknown error'}`
+            ? `حصل خطأ أثناء رفع إثبات الكسب: ${err?.message || 'unknown error'}`
+            : `حصل خطأ أثناء رفع إثبات الاسترداد: ${err?.message || 'unknown error'}`
         );
       }
     };
@@ -361,12 +394,14 @@ export default function AdminPage() {
       const { error } = await supabase.from('codes').delete().eq('id', code.id);
       if (error) throw error;
 
+      setCodes((prev) => prev.filter((c) => c.id !== code.id));
+      setWonCodes((prev) => prev.filter((c) => c.id !== code.id));
+
       await recalcDayStats(currentDay);
       await loadAll();
       setMessage('تم حذف الكود نهائيًا');
     } catch (err: any) {
-      console.error('DELETE ERROR:', err);
-      setMessage(`حصل خطأ أثناء حذف الكود: ${err?.message || JSON.stringify(err) || 'unknown error'}`);
+      setMessage(`حصل خطأ أثناء حذف الكود: ${err?.message || 'unknown error'}`);
     }
   };
 
@@ -411,8 +446,7 @@ export default function AdminPage() {
 
       setMessage('تم إنهاء اليوم وفتح يوم جديد');
     } catch (err: any) {
-      console.error('END DAY ERROR:', err);
-      setMessage(`حصل خطأ أثناء إنهاء اليوم: ${err?.message || JSON.stringify(err) || 'unknown error'}`);
+      setMessage(`حصل خطأ أثناء إنهاء اليوم: ${err?.message || 'unknown error'}`);
     }
   };
 
