@@ -471,49 +471,49 @@ export default function AdminPage() {
 
   if (!authorized) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#040a04] px-4" dir="rtl">
+      <div className="min-h-screen flex items-center justify-center bg-[#040a04] px-3 sm:px-4" dir="rtl">
         <form
           onSubmit={handleLogin}
-          className="w-full max-w-md rounded-[32px] border border-green-900/40 bg-[#081008] p-6 shadow-[0_0_40px_rgba(0,255,120,0.08)]"
+          className="w-full max-w-md rounded-[24px] sm:rounded-[28px] md:rounded-[32px] border border-green-900/40 bg-[#081008] p-4 sm:p-5 md:p-6 shadow-[0_0_40px_rgba(0,255,120,0.08)]"
         >
-          <h1 className="mb-6 text-center text-3xl font-black text-white">دخول لوحة الإدارة</h1>
+          <h1 className="mb-5 sm:mb-6 text-center text-[24px] sm:text-[28px] md:text-3xl font-black text-white">دخول لوحة الإدارة</h1>
 
           <input
             type="password"
             placeholder="اكتب كلمة السر"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mb-4 w-full rounded-2xl border border-green-900/50 bg-black/40 px-4 py-3 text-white outline-none"
+            className="mb-4 w-full rounded-2xl border border-green-900/50 bg-black/40 px-4 py-3 text-[16px] sm:text-[17px] md:text-base text-white outline-none"
           />
 
-          <button className="w-full rounded-2xl bg-green-500 py-3 text-xl font-black text-black">دخول</button>
+          <button className="w-full rounded-2xl bg-green-500 py-3 text-[18px] sm:text-[19px] md:text-xl font-black text-black">دخول</button>
 
-          {message && <p className="mt-4 text-center font-bold text-red-400">{message}</p>}
+          {message && <p className="mt-4 text-center text-[14px] sm:text-[15px] md:text-base font-bold text-red-400">{message}</p>}
         </form>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#030903] px-4 py-8 text-white" dir="rtl">
-      <div className="mx-auto max-w-5xl space-y-8">
-        <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+    <div className="min-h-screen bg-[#030903] px-3 sm:px-4 py-5 sm:py-6 md:py-8 text-white" dir="rtl">
+      <div className="mx-auto max-w-5xl space-y-6 sm:space-y-8">
+        <div className="flex flex-col items-start justify-between gap-3 sm:gap-4 md:flex-row md:items-center">
           <div>
-            <h1 className="text-4xl font-black">⚙️ لوحة الإدارة</h1>
-            <p className="mt-2 text-xl text-gray-400">إضافة وإدارة أكواد التوقعات اليومية</p>
+            <h1 className="text-[28px] sm:text-[34px] md:text-4xl font-black">⚙️ لوحة الإدارة</h1>
+            <p className="mt-1.5 sm:mt-2 text-[15px] sm:text-[17px] md:text-xl text-gray-400">إضافة وإدارة أكواد التوقعات اليومية</p>
           </div>
 
           {!showAddForm ? (
             <button
               onClick={() => setShowAddForm(true)}
-              className="rounded-2xl bg-green-500 px-8 py-4 text-2xl font-black text-black shadow-[0_0_25px_rgba(0,255,120,0.25)]"
+              className="w-full md:w-auto rounded-2xl bg-green-500 px-5 sm:px-6 md:px-8 py-3 sm:py-3.5 md:py-4 text-[18px] sm:text-[20px] md:text-2xl font-black text-black shadow-[0_0_25px_rgba(0,255,120,0.25)]"
             >
               + إضافة كود
             </button>
           ) : (
             <button
               onClick={() => setShowAddForm(false)}
-              className="rounded-2xl bg-green-500 px-8 py-4 text-2xl font-black text-black shadow-[0_0_25px_rgba(0,255,120,0.25)]"
+              className="w-full md:w-auto rounded-2xl bg-green-500 px-5 sm:px-6 md:px-8 py-3 sm:py-3.5 md:py-4 text-[18px] sm:text-[20px] md:text-2xl font-black text-black shadow-[0_0_25px_rgba(0,255,120,0.25)]"
             >
               ✕ إغلاق
             </button>
@@ -521,65 +521,65 @@ export default function AdminPage() {
         </div>
 
         {showAddForm && (
-          <div className="rounded-[32px] border border-green-900/50 bg-[radial-gradient(circle_at_top,#0d2210,#071107)] p-6 shadow-[0_0_40px_rgba(0,255,120,0.08)]">
-            <h2 className="mb-6 text-4xl font-black">+ إضافة كود جديد</h2>
+          <div className="rounded-[24px] sm:rounded-[28px] md:rounded-[32px] border border-green-900/50 bg-[radial-gradient(circle_at_top,#0d2210,#071107)] p-4 sm:p-5 md:p-6 shadow-[0_0_40px_rgba(0,255,120,0.08)]">
+            <h2 className="mb-5 sm:mb-6 text-[26px] sm:text-[32px] md:text-4xl font-black">+ إضافة كود جديد</h2>
 
-            <form onSubmit={handleAddCode} className="space-y-5">
+            <form onSubmit={handleAddCode} className="space-y-4 sm:space-y-5">
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="mb-2 block text-xl text-gray-300">نوع التوقع (اختياري)</label>
+                  <label className="mb-2 block text-[15px] sm:text-[18px] md:text-xl text-gray-300">نوع التوقع (اختياري)</label>
                   <input
                     value={tipOutcome}
                     onChange={(e) => setTipOutcome(e.target.value)}
                     placeholder="مثال: 1 أو X2 أو أقل من 7.5"
-                    className="w-full rounded-2xl border border-green-900/50 bg-black/40 px-4 py-4 text-xl text-white outline-none"
+                    className="w-full rounded-2xl border border-green-900/50 bg-black/40 px-4 py-3.5 md:py-4 text-[16px] sm:text-[18px] md:text-xl text-white outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-xl text-gray-300">نسبة ربح الكود</label>
+                  <label className="mb-2 block text-[15px] sm:text-[18px] md:text-xl text-gray-300">نسبة ربح الكود</label>
                   <input
                     value={odds}
                     onChange={(e) => setOdds(e.target.value)}
                     placeholder="مثال: 1.75"
-                    className="w-full rounded-2xl border border-green-900/50 bg-black/40 px-4 py-4 text-xl text-white outline-none"
+                    className="w-full rounded-2xl border border-green-900/50 bg-black/40 px-4 py-3.5 md:py-4 text-[16px] sm:text-[18px] md:text-xl text-white outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="mb-2 block text-xl text-gray-300">وصف الكود (اختياري)</label>
+                <label className="mb-2 block text-[15px] sm:text-[18px] md:text-xl text-gray-300">وصف الكود (اختياري)</label>
                 <input
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="اكتب وصف الرهان"
-                  className="w-full rounded-2xl border border-green-900/50 bg-black/40 px-4 py-4 text-xl text-white outline-none"
+                  className="w-full rounded-2xl border border-green-900/50 bg-black/40 px-4 py-3.5 md:py-4 text-[16px] sm:text-[18px] md:text-xl text-white outline-none"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-xl text-gray-300">الكود</label>
+                <label className="mb-2 block text-[15px] sm:text-[18px] md:text-xl text-gray-300">الكود</label>
                 <input
                   value={tipCode}
                   onChange={(e) => setTipCode(e.target.value)}
                   placeholder="مثال: MC-ARS-2024"
-                  className="w-full rounded-2xl border border-green-900/50 bg-black/40 px-4 py-4 text-center text-3xl tracking-[0.2em] text-white outline-none"
+                  className="w-full rounded-2xl border border-green-900/50 bg-black/40 px-3 sm:px-4 py-3.5 md:py-4 text-center text-[22px] sm:text-[28px] md:text-3xl tracking-[0.12em] sm:tracking-[0.16em] md:tracking-[0.2em] text-white outline-none"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-xl text-gray-300">صورة الكود (إجباري)</label>
-                <label className="flex cursor-pointer items-center justify-center rounded-3xl border-2 border-dashed border-green-700/60 bg-[#071107] px-4 py-10 text-2xl text-gray-300">
+                <label className="mb-2 block text-[15px] sm:text-[18px] md:text-xl text-gray-300">صورة الكود (إجباري)</label>
+                <label className="flex cursor-pointer items-center justify-center rounded-3xl border-2 border-dashed border-green-700/60 bg-[#071107] px-4 py-8 sm:py-9 md:py-10 text-[18px] sm:text-[22px] md:text-2xl text-gray-300">
                   📸 رفع صورة للكود
                   <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                 </label>
 
-                {betImage && <p className="mt-3 text-green-400">{betImage.name}</p>}
+                {betImage && <p className="mt-3 text-[14px] sm:text-[16px] md:text-base text-green-400 break-all">{betImage.name}</p>}
 
                 {betImagePreview && (
-                  <div className="mt-4 overflow-hidden rounded-[28px] border border-green-900/40 bg-black/20 p-4">
-                    <p className="mb-3 text-xl font-bold text-gray-300">معاينة الصورة قبل الإضافة</p>
-                    <img src={betImagePreview} alt="معاينة صورة الكود" className="mx-auto block max-h-[500px] w-full rounded-2xl object-contain" />
+                  <div className="mt-4 overflow-hidden rounded-[24px] sm:rounded-[26px] md:rounded-[28px] border border-green-900/40 bg-black/20 p-3 sm:p-4">
+                    <p className="mb-3 text-[16px] sm:text-[18px] md:text-xl font-bold text-gray-300">معاينة الصورة قبل الإضافة</p>
+                    <img src={betImagePreview} alt="معاينة صورة الكود" className="mx-auto block max-h-[420px] md:max-h-[500px] w-full rounded-2xl object-contain" />
                   </div>
                 )}
               </div>
@@ -588,7 +588,7 @@ export default function AdminPage() {
                 <button
                   type="submit"
                   disabled={savingCode}
-                  className="rounded-2xl bg-green-500 px-6 py-4 text-3xl font-black text-black shadow-[0_0_25px_rgba(0,255,120,0.25)] disabled:opacity-60"
+                  className="rounded-2xl bg-green-500 px-5 md:px-6 py-3.5 md:py-4 text-[22px] sm:text-[26px] md:text-3xl font-black text-black shadow-[0_0_25px_rgba(0,255,120,0.25)] disabled:opacity-60"
                 >
                   {savingCode ? 'جاري الإضافة...' : '✅ إضافة الكود'}
                 </button>
@@ -596,7 +596,7 @@ export default function AdminPage() {
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="rounded-2xl border border-green-900/50 bg-black/30 px-6 py-4 text-3xl font-black text-white"
+                  className="rounded-2xl border border-green-900/50 bg-black/30 px-5 md:px-6 py-3.5 md:py-4 text-[22px] sm:text-[26px] md:text-3xl font-black text-white"
                 >
                   إلغاء
                 </button>
@@ -605,28 +605,28 @@ export default function AdminPage() {
           </div>
         )}
 
-        <div className="rounded-[32px] border border-green-900/50 bg-[radial-gradient(circle_at_top,#0d2210,#071107)] p-6 shadow-[0_0_40px_rgba(0,255,120,0.08)]">
-          <h2 className="mb-8 text-4xl font-black">📊 إحصائيات اليوم</h2>
+        <div className="rounded-[24px] sm:rounded-[28px] md:rounded-[32px] border border-green-900/50 bg-[radial-gradient(circle_at_top,#0d2210,#071107)] p-4 sm:p-5 md:p-6 shadow-[0_0_40px_rgba(0,255,120,0.08)]">
+          <h2 className="mb-5 sm:mb-6 md:mb-8 text-[26px] sm:text-[32px] md:text-4xl font-black">📊 إحصائيات اليوم</h2>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between rounded-3xl border border-green-900/40 bg-black/40 px-6 py-6">
-              <span className="text-3xl text-gray-300">إجمالي الأكواد</span>
-              <span className="text-5xl font-black text-white">{stats.totalCodes}</span>
+          <div className="space-y-3 sm:space-y-4">
+            <div className="flex items-center justify-between rounded-[22px] sm:rounded-3xl border border-green-900/40 bg-black/40 px-4 sm:px-5 md:px-6 py-4 sm:py-5 md:py-6 gap-3">
+              <span className="text-[18px] sm:text-[24px] md:text-3xl text-gray-300">إجمالي الأكواد</span>
+              <span className="text-[34px] sm:text-[42px] md:text-5xl font-black text-white">{stats.totalCodes}</span>
             </div>
 
-            <div className="flex items-center justify-between rounded-3xl border border-green-900/40 bg-black/40 px-6 py-6">
-              <span className="text-3xl text-gray-300">الأكواد الرابحة</span>
-              <span className="text-5xl font-black text-green-400">{stats.wonCodes}</span>
+            <div className="flex items-center justify-between rounded-[22px] sm:rounded-3xl border border-green-900/40 bg-black/40 px-4 sm:px-5 md:px-6 py-4 sm:py-5 md:py-6 gap-3">
+              <span className="text-[18px] sm:text-[24px] md:text-3xl text-gray-300">الأكواد الرابحة</span>
+              <span className="text-[34px] sm:text-[42px] md:text-5xl font-black text-green-400">{stats.wonCodes}</span>
             </div>
 
-            <div className="flex items-center justify-between rounded-3xl border border-yellow-900/20 bg-black/40 px-6 py-6">
-              <span className="text-3xl text-gray-300">مجموع ربح الأكواد</span>
-              <span className="text-5xl font-black text-yellow-400">{formatOdds(stats.combinedOdds)}</span>
+            <div className="flex items-center justify-between rounded-[22px] sm:rounded-3xl border border-yellow-900/20 bg-black/40 px-4 sm:px-5 md:px-6 py-4 sm:py-5 md:py-6 gap-3">
+              <span className="text-[18px] sm:text-[24px] md:text-3xl text-gray-300">مجموع ربح الأكواد</span>
+              <span className="text-[30px] sm:text-[38px] md:text-5xl font-black text-yellow-400">{formatOdds(stats.combinedOdds)}</span>
             </div>
 
             <button
               onClick={handleEndDay}
-              className="mt-6 w-full rounded-3xl bg-[#a88405] px-6 py-5 text-3xl font-black text-black shadow-[0_0_25px_rgba(234,179,8,0.18)]"
+              className="mt-4 sm:mt-6 w-full rounded-[22px] sm:rounded-3xl bg-[#a88405] px-5 md:px-6 py-4 sm:py-4.5 md:py-5 text-[22px] sm:text-[26px] md:text-3xl font-black text-black shadow-[0_0_25px_rgba(234,179,8,0.18)]"
             >
               نهاية اليوم - أحسب الإحصائيات
             </button>
@@ -634,69 +634,69 @@ export default function AdminPage() {
         </div>
 
         <div>
-          <h2 className="mb-6 text-4xl font-black">📋 أكواد اليوم النشطة ({codes.length})</h2>
+          <h2 className="mb-4 sm:mb-5 md:mb-6 text-[26px] sm:text-[32px] md:text-4xl font-black">📋 أكواد اليوم النشطة ({codes.length})</h2>
 
           {loading ? (
-            <div className="rounded-3xl border border-green-900/40 bg-black/30 p-10 text-center text-2xl text-gray-400">
+            <div className="rounded-3xl border border-green-900/40 bg-black/30 p-8 sm:p-10 text-center text-[18px] sm:text-[22px] md:text-2xl text-gray-400">
               جاري التحميل...
             </div>
           ) : codes.length === 0 ? (
-            <div className="rounded-3xl border border-green-900/40 bg-black/30 p-10 text-center text-2xl text-gray-400">
+            <div className="rounded-3xl border border-green-900/40 bg-black/30 p-8 sm:p-10 text-center text-[18px] sm:text-[22px] md:text-2xl text-gray-400">
               لا توجد أكواد اليوم
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-5 md:space-y-6">
               {codes.map((code) => (
                 <div
                   key={code.id}
-                  className="rounded-[32px] border border-green-900/50 bg-[radial-gradient(circle_at_top,#0d2210,#071107)] p-6 shadow-[0_0_40px_rgba(0,255,120,0.08)]"
+                  className="rounded-[24px] sm:rounded-[28px] md:rounded-[32px] border border-green-900/50 bg-[radial-gradient(circle_at_top,#0d2210,#071107)] p-4 sm:p-5 md:p-6 shadow-[0_0_40px_rgba(0,255,120,0.08)]"
                 >
-                  <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-                    <div className="rounded-2xl border border-green-500/40 bg-green-500/10 px-5 py-3 text-3xl font-black text-green-400">
+                  <div className="mb-4 sm:mb-5 flex flex-wrap items-center justify-between gap-3">
+                    <div className="rounded-2xl border border-green-500/40 bg-green-500/10 px-4 sm:px-5 py-2.5 sm:py-3 text-[20px] sm:text-[24px] md:text-3xl font-black text-green-400">
                       {code.tip_outcome || 'بدون نوع'}
                     </div>
 
-                    <div className="text-center">
-                      <div className="text-5xl font-black tracking-[0.18em]">{code.tip_code}</div>
+                    <div className="text-center w-full md:w-auto order-last md:order-none">
+                      <div className="text-[28px] sm:text-[38px] md:text-5xl font-black tracking-[0.12em] sm:tracking-[0.14em] md:tracking-[0.18em] break-all">{code.tip_code}</div>
                     </div>
 
-                    <div className="text-4xl font-black text-yellow-400">x{formatOdds(code.odds)}</div>
+                    <div className="text-[28px] sm:text-[34px] md:text-4xl font-black text-yellow-400">x{formatOdds(code.odds)}</div>
                   </div>
 
                   {code.description && (
-                    <div className="mb-5 rounded-2xl border border-green-900/40 bg-black/30 px-5 py-4 text-2xl text-gray-300">
+                    <div className="mb-4 sm:mb-5 rounded-2xl border border-green-900/40 bg-black/30 px-4 sm:px-5 py-3 sm:py-4 text-[18px] sm:text-[22px] md:text-2xl text-gray-300">
                       {code.description}
                     </div>
                   )}
 
                   {getPublicUrl(code.code_image_url) && (
-                    <div className="mb-6 overflow-hidden rounded-[28px] border border-green-900/40 bg-black/20 p-4">
+                    <div className="mb-5 sm:mb-6 overflow-hidden rounded-[22px] sm:rounded-[24px] md:rounded-[28px] border border-green-900/40 bg-black/20 p-3 sm:p-4">
                       <img
                         src={getPublicUrl(code.code_image_url)!}
                         alt="صورة الرهان"
-                        className="mx-auto block max-h-[600px] w-full rounded-2xl object-contain"
+                        className="mx-auto block max-h-[420px] md:max-h-[600px] w-full rounded-2xl object-contain"
                       />
                     </div>
                   )}
 
-                  <div className="grid gap-4 md:grid-cols-3">
+                  <div className="grid gap-3 sm:gap-4 md:grid-cols-3">
                     <button
                       onClick={() => handleWinOrRefund(code, 'won')}
-                      className="rounded-2xl bg-green-600 px-6 py-4 text-3xl font-black text-white"
+                      className="rounded-2xl bg-green-600 px-4 sm:px-5 md:px-6 py-3.5 sm:py-4 text-[22px] sm:text-[26px] md:text-3xl font-black text-white"
                     >
                       ✅ كسب
                     </button>
 
                     <button
                       onClick={() => handleWinOrRefund(code, 'refund')}
-                      className="rounded-2xl bg-blue-700 px-6 py-4 text-3xl font-black text-white"
+                      className="rounded-2xl bg-blue-700 px-4 sm:px-5 md:px-6 py-3.5 sm:py-4 text-[22px] sm:text-[26px] md:text-3xl font-black text-white"
                     >
                       📥 استرداد
                     </button>
 
                     <button
                       onClick={() => handleDelete(code)}
-                      className="rounded-2xl bg-red-900 px-6 py-4 text-3xl font-black text-white"
+                      className="rounded-2xl bg-red-900 px-4 sm:px-5 md:px-6 py-3.5 sm:py-4 text-[22px] sm:text-[26px] md:text-3xl font-black text-white"
                     >
                       🗑️ حذف
                     </button>
@@ -708,63 +708,63 @@ export default function AdminPage() {
         </div>
 
         <div>
-          <h2 className="mb-6 text-4xl font-black">🏆 أكواد اليوم الرابحة ({wonCodes.length})</h2>
+          <h2 className="mb-4 sm:mb-5 md:mb-6 text-[26px] sm:text-[32px] md:text-4xl font-black">🏆 أكواد اليوم الرابحة ({wonCodes.length})</h2>
 
           {loading ? (
-            <div className="rounded-3xl border border-green-900/40 bg-black/30 p-10 text-center text-2xl text-gray-400">
+            <div className="rounded-3xl border border-green-900/40 bg-black/30 p-8 sm:p-10 text-center text-[18px] sm:text-[22px] md:text-2xl text-gray-400">
               جاري التحميل...
             </div>
           ) : wonCodes.length === 0 ? (
-            <div className="rounded-3xl border border-green-900/40 bg-black/30 p-10 text-center text-2xl text-gray-400">
+            <div className="rounded-3xl border border-green-900/40 bg-black/30 p-8 sm:p-10 text-center text-[18px] sm:text-[22px] md:text-2xl text-gray-400">
               لا توجد أكواد رابحة اليوم
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-5 md:space-y-6">
               {wonCodes.map((code) => (
                 <div
                   key={code.id}
-                  className="rounded-[32px] border border-green-900/50 bg-[radial-gradient(circle_at_top,#0d2210,#071107)] p-6 shadow-[0_0_40px_rgba(0,255,120,0.08)]"
+                  className="rounded-[24px] sm:rounded-[28px] md:rounded-[32px] border border-green-900/50 bg-[radial-gradient(circle_at_top,#0d2210,#071107)] p-4 sm:p-5 md:p-6 shadow-[0_0_40px_rgba(0,255,120,0.08)]"
                 >
-                  <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-                    <div className="rounded-2xl border border-green-500/40 bg-green-500/10 px-5 py-3 text-3xl font-black text-green-400">
+                  <div className="mb-4 sm:mb-5 flex flex-wrap items-center justify-between gap-3">
+                    <div className="rounded-2xl border border-green-500/40 bg-green-500/10 px-4 sm:px-5 py-2.5 sm:py-3 text-[20px] sm:text-[24px] md:text-3xl font-black text-green-400">
                       {code.tip_outcome || 'بدون نوع'}
                     </div>
 
-                    <div className="text-center">
-                      <div className="text-5xl font-black tracking-[0.18em]">{code.tip_code}</div>
+                    <div className="text-center w-full md:w-auto order-last md:order-none">
+                      <div className="text-[28px] sm:text-[38px] md:text-5xl font-black tracking-[0.12em] sm:tracking-[0.14em] md:tracking-[0.18em] break-all">{code.tip_code}</div>
                     </div>
 
-                    <div className="rounded-2xl bg-green-500 px-5 py-3 text-2xl font-black text-black">
+                    <div className="rounded-2xl bg-green-500 px-4 sm:px-5 py-2.5 sm:py-3 text-[20px] sm:text-[24px] md:text-2xl font-black text-black">
                       {code.status === 'refund' ? '📥 استرداد' : '✅ كسب'}
                     </div>
                   </div>
 
                   {code.description && (
-                    <div className="mb-5 rounded-2xl border border-green-900/40 bg-black/30 px-5 py-4 text-2xl text-gray-300">
+                    <div className="mb-4 sm:mb-5 rounded-2xl border border-green-900/40 bg-black/30 px-4 sm:px-5 py-3 sm:py-4 text-[18px] sm:text-[22px] md:text-2xl text-gray-300">
                       {code.description}
                     </div>
                   )}
 
                   {getPublicUrl(code.code_image_url) && (
-                    <div className="mb-4 overflow-hidden rounded-[28px] border border-green-900/40 bg-black/20 p-4">
-                      <p className="mb-3 text-xl font-bold text-gray-300">صورة الرهان</p>
+                    <div className="mb-4 overflow-hidden rounded-[22px] sm:rounded-[24px] md:rounded-[28px] border border-green-900/40 bg-black/20 p-3 sm:p-4">
+                      <p className="mb-3 text-[16px] sm:text-[18px] md:text-xl font-bold text-gray-300">صورة الرهان</p>
                       <img
                         src={getPublicUrl(code.code_image_url)!}
                         alt="صورة الرهان"
-                        className="mx-auto block max-h-[600px] w-full rounded-2xl object-contain"
+                        className="mx-auto block max-h-[420px] md:max-h-[600px] w-full rounded-2xl object-contain"
                       />
                     </div>
                   )}
 
                   {getPublicUrl(code.proof_image_url) && (
-                    <div className="overflow-hidden rounded-[28px] border border-green-900/40 bg-black/20 p-4">
-                      <p className="mb-3 text-xl font-bold text-gray-300">
+                    <div className="overflow-hidden rounded-[22px] sm:rounded-[24px] md:rounded-[28px] border border-green-900/40 bg-black/20 p-3 sm:p-4">
+                      <p className="mb-3 text-[16px] sm:text-[18px] md:text-xl font-bold text-gray-300">
                         {code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
                       </p>
                       <img
                         src={getPublicUrl(code.proof_image_url)!}
                         alt={code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
-                        className="mx-auto block max-h-[600px] w-full rounded-2xl object-contain"
+                        className="mx-auto block max-h-[420px] md:max-h-[600px] w-full rounded-2xl object-contain"
                       />
                     </div>
                   )}
@@ -777,14 +777,14 @@ export default function AdminPage() {
         <div className="flex justify-center">
           <button
             onClick={handleLogout}
-            className="rounded-2xl border border-red-500/40 bg-red-500/10 px-6 py-3 text-2xl font-black text-red-400"
+            className="w-full sm:w-auto rounded-2xl border border-red-500/40 bg-red-500/10 px-6 py-3 text-[18px] sm:text-[20px] md:text-2xl font-black text-red-400"
           >
             تسجيل خروج
           </button>
         </div>
 
         {message && (
-          <div className="rounded-2xl border border-green-700/40 bg-green-500/10 px-5 py-4 text-center text-xl font-black text-green-400">
+          <div className="rounded-2xl border border-green-700/40 bg-green-500/10 px-4 sm:px-5 py-4 text-center text-[15px] sm:text-[18px] md:text-xl font-black text-green-400 break-words">
             {message}
           </div>
         )}
