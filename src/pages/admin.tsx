@@ -423,14 +423,42 @@ export default function AdminPage() {
 
       const newDay = addOneDay(currentDay);
 
-      const { error: appStateError } = await supabase
+      const { data: existingState, error: stateReadError } = await supabase
         .from('app_state')
-        .update({ value: newDay })
-        .eq('key', 'current_day');
+        .select('*')
+        .eq('key', 'current_day')
+        .maybeSingle();
 
-      if (appStateError) throw appStateError;
+      if (stateReadError) throw stateReadError;
+
+      if (existingState) {
+        const { error: updateError } = await supabase
+          .from('app_state')
+          .update({ value: newDay })
+          .eq('key', 'current_day');
+
+        if (updateError) throw updateError;
+      } else {
+        const { error: insertError } = await supabase
+          .from('app_state')
+          .insert([{ key: 'current_day', value: newDay }]);
+
+        if (insertError) throw insertError;
+      }
 
       await ensureDailyStats(newDay);
+
+      const { data: verifyState, error: verifyError } = await supabase
+        .from('app_state')
+        .select('*')
+        .eq('key', 'current_day')
+        .maybeSingle();
+
+      if (verifyError) throw verifyError;
+
+      if (!verifyState || verifyState.value !== newDay) {
+        throw new Error('فشل حفظ اليوم الجديد في app_state');
+      }
 
       setCurrentDay(newDay);
       setCodes([]);
@@ -444,7 +472,7 @@ export default function AdminPage() {
         is_finalized: false,
       });
 
-      setMessage('تم إنهاء اليوم وفتح يوم جديد');
+      setMessage(`تم إنهاء اليوم بنجاح. اليوم الجديد هو: ${newDay}`);
     } catch (err: any) {
       setMessage(`حصل خطأ أثناء إنهاء اليوم: ${err?.message || 'unknown error'}`);
     }
