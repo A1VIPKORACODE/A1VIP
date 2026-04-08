@@ -49,17 +49,24 @@ function fileName(prefix: string, file: File) {
 
 async function uploadImage(file: File, prefix: string) {
   const path = fileName(prefix, file);
-  const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+
+  const { data, error } = await supabase.storage.from(BUCKET).upload(path, file, {
     cacheControl: '3600',
     upsert: false,
   });
+
+  console.log('UPLOAD RESULT:', { data, error, bucket: BUCKET, path });
+
   if (error) throw error;
   return path;
 }
 
 async function removeImage(path?: string | null) {
   if (!path) return;
-  const clean = path.replace(/^https?:\/\/[^/]+\/storage\/v1\/object\/public\/codes\//, '').replace(/^\/+/, '').replace(/^codes\//, '');
+  const clean = path
+    .replace(/^https?:\/\/[^/]+\/storage\/v1\/object\/public\/codes\//, '')
+    .replace(/^\/+/, '')
+    .replace(/^codes\//, '');
   if (!clean) return;
   await supabase.storage.from(BUCKET).remove([clean]);
 }
@@ -189,8 +196,9 @@ export default function AdminPage() {
 
       setCodes((codesData || []) as CodeItem[]);
       setDailyStats((statsData as DailyStat) || null);
-    } catch (err) {
-      setMessage('حصل خطأ أثناء تحميل البيانات');
+    } catch (err: any) {
+      console.error('LOAD ALL ERROR:', err);
+      setMessage(`حصل خطأ أثناء تحميل البيانات: ${err?.message || JSON.stringify(err) || 'unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -243,19 +251,24 @@ export default function AdminPage() {
 
       const uploadedPath = await uploadImage(betImage, 'bet-images');
 
-      const { error } = await supabase.from('codes').insert([
-        {
-          description: description.trim() || null,
-          tip_outcome: tipOutcome.trim() || null,
-          tip_code: tipCode.trim(),
-          odds: Number(odds),
-          status: 'active',
-          code_image_url: uploadedPath,
-          proof_image_url: null,
-          proof_type: null,
-          day_date: currentDay,
-        },
-      ]);
+      const { data: insertedData, error } = await supabase
+        .from('codes')
+        .insert([
+          {
+            description: description.trim() || null,
+            tip_outcome: tipOutcome.trim() || null,
+            tip_code: tipCode.trim(),
+            odds: Number(odds),
+            status: 'active',
+            code_image_url: uploadedPath,
+            proof_image_url: null,
+            proof_type: null,
+            day_date: currentDay,
+          },
+        ])
+        .select();
+
+      console.log('ADD CODE RESULT:', { insertedData, error, currentDay, uploadedPath });
 
       if (error) throw error;
 
@@ -263,8 +276,9 @@ export default function AdminPage() {
       await loadAll();
       resetForm();
       setMessage('تمت إضافة الكود بنجاح');
-    } catch (err) {
-      setMessage('حصل خطأ أثناء إضافة الكود');
+    } catch (err: any) {
+      console.error('ADD CODE ERROR:', err);
+      setMessage(`حصل خطأ أثناء إضافة الكود: ${err?.message || JSON.stringify(err) || 'unknown error'}`);
     } finally {
       setSavingCode(false);
     }
@@ -301,8 +315,13 @@ export default function AdminPage() {
         await recalcDayStats(currentDay);
         await loadAll();
         setMessage(nextStatus === 'won' ? 'تم تعليم الكود كرابح' : 'تم تعليم الكود كمسترد');
-      } catch (err) {
-        setMessage(nextStatus === 'won' ? 'حصل خطأ أثناء رفع إثبات الكسب' : 'حصل خطأ أثناء رفع إثبات الاسترداد');
+      } catch (err: any) {
+        console.error('WIN/REFUND ERROR:', err);
+        setMessage(
+          nextStatus === 'won'
+            ? `حصل خطأ أثناء رفع إثبات الكسب: ${err?.message || JSON.stringify(err) || 'unknown error'}`
+            : `حصل خطأ أثناء رفع إثبات الاسترداد: ${err?.message || JSON.stringify(err) || 'unknown error'}`
+        );
       }
     };
 
@@ -325,8 +344,9 @@ export default function AdminPage() {
       await recalcDayStats(currentDay);
       await loadAll();
       setMessage('تم حذف الكود نهائيًا');
-    } catch (err) {
-      setMessage('حصل خطأ أثناء حذف الكود');
+    } catch (err: any) {
+      console.error('DELETE ERROR:', err);
+      setMessage(`حصل خطأ أثناء حذف الكود: ${err?.message || JSON.stringify(err) || 'unknown error'}`);
     }
   };
 
@@ -379,8 +399,9 @@ export default function AdminPage() {
       });
 
       setMessage('تم إنهاء اليوم وفتح يوم جديد');
-    } catch (err) {
-      setMessage('حصل خطأ أثناء إنهاء اليوم');
+    } catch (err: any) {
+      console.error('END DAY ERROR:', err);
+      setMessage(`حصل خطأ أثناء إنهاء اليوم: ${err?.message || JSON.stringify(err) || 'unknown error'}`);
     }
   };
 
