@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
+const AR_LATN_LOCALE = 'ar-EG-u-nu-latn';
+
 function normalizeStoragePath(path?: string | null) {
   if (!path) return null;
   let clean = String(path).trim();
@@ -22,7 +24,7 @@ function getImageUrl(path?: string | null) {
 }
 
 function formatDateArabic(dateStr: string) {
-  return new Date(`${dateStr}T00:00:00`).toLocaleDateString('ar-EG', {
+  return new Date(`${dateStr}T00:00:00`).toLocaleDateString(AR_LATN_LOCALE, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -202,13 +204,9 @@ export default function WonCodesPage() {
 
       {yesterdayCodes.length > 0 && previousWinningDay && (
         <section className="rounded-[38px] border border-green-900/50 bg-[radial-gradient(circle_at_top,#0d2210,#071107)] p-6 md:p-10 text-center shadow-[0_0_45px_rgba(0,255,120,0.08)]">
-          <div className="mb-4 text-2xl md:text-3xl font-black text-green-400">
-            📅 إحصائيات أكواد امبارح
-          </div>
+          <div className="mb-4 text-2xl md:text-3xl font-black text-green-400">📅 إحصائيات أكواد امبارح</div>
 
-          <div className="mb-6 text-lg md:text-2xl font-bold text-gray-400">
-            {formatDateArabic(previousWinningDay)}
-          </div>
+          <div className="mb-6 text-lg md:text-2xl font-bold text-gray-400">{formatDateArabic(previousWinningDay)}</div>
 
           <p className="mx-auto max-w-4xl text-3xl md:text-5xl font-black leading-relaxed text-white">
             لو كنت رميت <span className="text-yellow-400">1000 جنيه</span> بس على أكوادنا المضمونة كانت هاتكون أرباحك دلوقتي
@@ -271,9 +269,7 @@ export default function WonCodesPage() {
       </section>
 
       <section className="rounded-[38px] border border-yellow-500/25 bg-gradient-to-br from-yellow-500/10 to-yellow-700/10 p-6 md:p-10 text-center shadow-[0_0_45px_rgba(234,179,8,0.12)]">
-        <h2 className="text-3xl md:text-5xl font-black leading-relaxed text-white">
-          🔥 انتهز الفرصة الآن واستخدم أكوادنا المضمونة
-        </h2>
+        <h2 className="text-3xl md:text-5xl font-black leading-relaxed text-white">🔥 انتهز الفرصة الآن واستخدم أكوادنا المضمونة</h2>
 
         <p className="mx-auto mt-8 max-w-4xl text-2xl md:text-4xl leading-relaxed text-gray-200">
           حتى تكون أرباحك الشهر القادم مضاعفات رأس مالك وانت مطمئن 💪
