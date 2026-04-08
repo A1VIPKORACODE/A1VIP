@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { supabase, MELBET_TUTORIAL_URL } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 
 function normalizeStoragePath(path?: string | null) {
   if (!path) return null;
@@ -59,6 +59,43 @@ type CodeRow = {
   day_date: string;
 };
 
+function ProofCard({ code, index }: { code: CodeRow; index: number }) {
+  return (
+    <div className="rounded-[32px] border border-green-900/50 bg-[radial-gradient(circle_at_top,#0d2210,#071107)] p-5 shadow-[0_0_40px_rgba(0,255,120,0.08)]">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-green-500 text-2xl font-black text-green-400">
+          {index}
+        </div>
+        <div className="rounded-full bg-green-500 px-4 py-2 text-sm font-black text-black">
+          {code.status === 'refund' ? '📥 استرداد' : '✅ رابح'}
+        </div>
+      </div>
+
+      <div className="mb-4 rounded-2xl border border-green-900/50 bg-black/40 px-4 py-4 text-center">
+        <div className="text-3xl font-black tracking-[0.18em] text-green-400">{code.tip_code}</div>
+      </div>
+
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="text-3xl font-black text-yellow-400">x{formatOdds(Number(code.odds || 0))}</div>
+        <div className="text-lg text-gray-300">نسبة ربح الكود</div>
+      </div>
+
+      {getImageUrl(code.proof_image_url) && (
+        <div className="overflow-hidden rounded-[24px] border border-green-900/40 bg-black/20 p-3">
+          <div className="mb-2 text-lg font-black text-gray-300">
+            📸 {code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
+          </div>
+          <img
+            src={getImageUrl(code.proof_image_url)!}
+            alt={code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
+            className="mx-auto block w-full rounded-2xl object-contain"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function WonCodesPage() {
   const [currentDay, setCurrentDay] = useState('');
   const [wonCodes, setWonCodes] = useState<CodeRow[]>([]);
@@ -84,7 +121,6 @@ export default function WonCodesPage() {
           .order('won_at', { ascending: false });
 
         if (error) throw error;
-
         if (!mounted) return;
 
         setCurrentDay(current);
@@ -146,8 +182,10 @@ export default function WonCodesPage() {
   return (
     <div className="space-y-10" dir="rtl">
       <section className="relative overflow-hidden rounded-3xl border border-yellow-500/20 bg-gradient-to-br from-[#050a05] via-[#061106] to-[#090f09] p-6 md:p-10 text-center">
-        <div className="mb-4 inline-flex items-center justify-center rounded-full border border-yellow-500/30 bg-yellow-500/10 px-6 py-3 text-xl font-black text-yellow-300">
-          🏆 الأكواد الرابحة
+        <div className="mb-4">
+          <div className="inline-flex items-center justify-center rounded-full border border-yellow-500/30 bg-yellow-500/10 px-6 py-3 text-xl font-black text-yellow-300">
+            🏆 الأكواد الرابحة
+          </div>
         </div>
 
         <h1 className="text-5xl md:text-7xl font-black leading-tight">
@@ -157,7 +195,7 @@ export default function WonCodesPage() {
         <p className="mt-4 text-2xl font-bold text-green-300">⚽ احصائيات الأكواد الرابحة ⚽</p>
       </section>
 
-      {yesterday && yesterdayCodes.length > 0 && (
+      {yesterdayCodes.length > 0 && (
         <section className="rounded-[38px] border border-green-900/50 bg-[radial-gradient(circle_at_top,#0d2210,#071107)] p-6 md:p-10 text-center shadow-[0_0_45px_rgba(0,255,120,0.08)]">
           <div className="mb-4 text-2xl md:text-3xl font-black text-green-400">📅 إحصائيات أكواد امبارح</div>
 
@@ -232,14 +270,20 @@ export default function WonCodesPage() {
 
         <div className="mx-auto mt-8 max-w-4xl rounded-[28px] border border-green-900/40 bg-black/35 p-6 md:p-8 text-right">
           <p className="text-2xl md:text-4xl font-black leading-relaxed text-white">🎲 عشان الأكواد تشتغل معاك لازم 🔤</p>
-          <p className="mt-5 text-2xl md:text-4xl font-black leading-relaxed text-white">1️⃣ تستخدمها في تطبيق <span className="text-gray-200">MELBET</span></p>
-          <p className="mt-4 text-2xl md:text-4xl font-black leading-relaxed text-white">2️⃣ وتكون مسجل ببروموكود <span className="text-yellow-400">A1VIP</span></p>
+          <p className="mt-5 text-2xl md:text-4xl font-black leading-relaxed text-white">
+            1️⃣ تستخدمها في تطبيق <span className="text-gray-200">MELBET</span>
+          </p>
+          <p className="mt-4 text-2xl md:text-4xl font-black leading-relaxed text-white">
+            2️⃣ وتكون مسجل ببروموكود <span className="text-yellow-400">A1VIP</span>
+          </p>
 
           <div className="my-6 h-px bg-green-900/40" />
 
           <p className="text-2xl md:text-4xl font-black leading-relaxed text-white">🗓 وده شرح:</p>
           <p className="mt-4 text-2xl md:text-4xl leading-relaxed text-gray-300">📌 طريقة تنزيل تطبيق MELBET</p>
-          <p className="mt-3 text-2xl md:text-4xl leading-relaxed text-gray-300">📌 والتسجيل ببروموكود <span className="text-yellow-400 font-black">A1VIP</span> ⬇️</p>
+          <p className="mt-3 text-2xl md:text-4xl leading-relaxed text-gray-300">
+            📌 والتسجيل ببروموكود <span className="text-yellow-400 font-black">A1VIP</span> ⬇️
+          </p>
         </div>
 
         <a
@@ -253,9 +297,9 @@ export default function WonCodesPage() {
       </section>
 
       <section className="space-y-8">
-        <div className="rounded-[32px] border border-yellow-500/30 bg-yellow-500/10 px-6 py-6 text-center shadow-[0_0_30px_rgba(234,179,8,0.12)]">
-          <h2 className="text-3xl md:text-5xl font-black text-yellow-300">💸 إثبات كل الأكواد الرابحة</h2>
-          <p className="mt-3 text-2xl md:text-4xl font-black text-yellow-200">⚽ لآخر 30 يوم ⚽</p>
+        <div className="mx-auto w-fit rounded-[28px] border border-yellow-400/50 bg-gradient-to-r from-yellow-500/20 via-yellow-400/15 to-yellow-500/20 px-8 py-5 text-center shadow-[0_0_35px_rgba(234,179,8,0.18)]">
+          <h2 className="text-3xl md:text-5xl font-black text-yellow-300">💸 إثبات كل الاكواد الرابحة 💸</h2>
+          <p className="mt-3 text-2xl md:text-3xl font-black text-yellow-200">⚽ لآخر 30 يوم ⚽</p>
         </div>
 
         {loading ? (
@@ -268,48 +312,17 @@ export default function WonCodesPage() {
           </div>
         ) : (
           Object.entries(groupedCodes).map(([day, items]) => (
-            <div key={day} className="space-y-5">
+            <div key={day} className="space-y-6">
               <div className="text-center">
                 <h3 className="text-3xl md:text-5xl font-black text-white">{formatDateArabic(day)}</h3>
                 <p className="mt-2 text-xl md:text-2xl text-gray-400">{items.length} كود رابح</p>
               </div>
 
-              {items.map((code, idx) => (
-                <div
-                  key={code.id}
-                  className="rounded-[32px] border border-green-900/50 bg-[radial-gradient(circle_at_top,#0d2210,#071107)] p-6 shadow-[0_0_40px_rgba(0,255,120,0.08)]"
-                >
-                  <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-                    <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-green-500 text-3xl font-black text-green-400">
-                      {idx + 1}
-                    </div>
-
-                    <div className="flex-1 text-center">
-                      <div className="mx-auto max-w-xl rounded-2xl border border-green-900/50 bg-black/40 px-6 py-4 text-4xl md:text-5xl font-black tracking-[0.18em] text-green-400">
-                        {code.tip_code}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mb-4 flex items-center justify-between gap-4">
-                    <div className="text-3xl font-black text-yellow-400">x{formatOdds(Number(code.odds || 0))}</div>
-                    <div className="text-2xl text-gray-300">نسبة ربح الكود</div>
-                  </div>
-
-                  {getImageUrl(code.proof_image_url) && (
-                    <div className="overflow-hidden rounded-[28px] border border-green-900/40 bg-black/20 p-4">
-                      <div className="mb-3 text-2xl font-black text-gray-300">
-                        📸 {code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
-                      </div>
-                      <img
-                        src={getImageUrl(code.proof_image_url)!}
-                        alt={code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
-                        className="mx-auto block w-full rounded-2xl object-contain"
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                {items.map((code, idx) => (
+                  <ProofCard key={code.id} code={code} index={idx + 1} />
+                ))}
+              </div>
             </div>
           ))
         )}
