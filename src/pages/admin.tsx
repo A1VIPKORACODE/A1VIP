@@ -76,6 +76,14 @@ async function removeImage(path?: string | null) {
   await supabase.storage.from(BUCKET).remove([clean]);
 }
 
+function SectionCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-[22px] sm:rounded-[26px] md:rounded-[30px] border border-emerald-500/20 bg-[linear-gradient(180deg,rgba(16,40,24,0.96),rgba(7,18,10,0.98))] p-3.5 sm:p-4 md:p-5 shadow-[0_0_30px_rgba(16,185,129,0.08)]">
+      {children}
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const [authorized, setAuthorized] = useState(false);
   const [password, setPassword] = useState('');
@@ -382,6 +390,95 @@ export default function AdminPage() {
     fileInput.click();
   };
 
+  const handleEditWonOdds = async (code: CodeItem) => {
+    const value = window.prompt('اكتب نسبة الربح الجديدة', String(code.odds ?? 1));
+    if (!value) return;
+
+    const parsed = Number(value);
+    if (Number.isNaN(parsed) || parsed <= 0) {
+      setMessage('اكتب رقم صحيح أكبر من 0');
+      return;
+    }
+
+    try {
+      setMessage('');
+      const { error } = await supabase.from('codes').update({ odds: parsed }).eq('id', code.id);
+      if (error) throw error;
+
+      setWonCodes((prev) => prev.map((item) => (item.id === code.id ? { ...item, odds: parsed } : item)));
+      await recalcDayStats(currentDay);
+      await loadAll();
+      setMessage('تم تعديل نسبة الربح');
+    } catch (err: any) {
+      setMessage(`حصل خطأ أثناء تعديل النسبة: ${err?.message || 'unknown error'}`);
+    }
+  };
+
+  const handleChangeWonProofImage = async (code: CodeItem) => {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+
+    fileInput.onchange = async () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
+
+      try {
+        setMessage('');
+
+        const uploadedPath = await uploadImage(file, code.status === 'refund' ? 'proof-refund' : 'proof-win');
+        const oldPath = code.proof_image_url;
+
+        const { error } = await supabase.from('codes').update({ proof_image_url: uploadedPath }).eq('id', code.id);
+        if (error) throw error;
+
+        if (oldPath) await removeImage(oldPath);
+
+        setWonCodes((prev) => prev.map((item) => (item.id === code.id ? { ...item, proof_image_url: uploadedPath } : item)));
+        await loadAll();
+        setMessage('تم تغيير الصورة بنجاح');
+      } catch (err: any) {
+        setMessage(`حصل خطأ أثناء تغيير الصورة: ${err?.message || 'unknown error'}`);
+      }
+    };
+
+    fileInput.click();
+  };
+
+  const handleToggleWonStatus = async (code: CodeItem) => {
+    const nextStatus: CodeStatus = code.status === 'won' ? 'refund' : 'won';
+    const payload: Partial<CodeItem> & { proof_type: string } = {
+      status: nextStatus,
+      proof_type: nextStatus,
+      odds: nextStatus === 'refund' ? 1 : code.odds,
+    };
+
+    try {
+      setMessage('');
+      const { error } = await supabase.from('codes').update(payload).eq('id', code.id);
+      if (error) throw error;
+
+      setWonCodes((prev) =>
+        prev.map((item) =>
+          item.id === code.id
+            ? {
+                ...item,
+                status: nextStatus,
+                proof_type: nextStatus,
+                odds: nextStatus === 'refund' ? 1 : item.odds,
+              }
+            : item,
+        ),
+      );
+
+      await recalcDayStats(currentDay);
+      await loadAll();
+      setMessage(nextStatus === 'refund' ? 'تم تحويل الحالة إلى استرداد' : 'تم تحويل الحالة إلى كسب');
+    } catch (err: any) {
+      setMessage(`حصل خطأ أثناء تغيير الحالة: ${err?.message || 'unknown error'}`);
+    }
+  };
+
   const handleDelete = async (code: CodeItem) => {
     const ok = window.confirm('هل أنت متأكد من حذف الكود نهائيًا؟');
     if (!ok) return;
@@ -474,7 +571,7 @@ export default function AdminPage() {
       <div className="min-h-screen flex items-center justify-center bg-[#040a04] px-3 sm:px-4" dir="rtl">
         <form
           onSubmit={handleLogin}
-          className="w-full max-w-md rounded-[24px] sm:rounded-[28px] md:rounded-[32px] border border-green-900/40 bg-[#081008] p-4 sm:p-5 md:p-6 shadow-[0_0_40px_rgba(0,255,120,0.08)]"
+          className="w-full max-w-md rounded-[24px] sm:rounded-[28px] md:rounded-[32px] border border-emerald-500/20 bg-[linear-gradient(180deg,rgba(16,40,24,0.96),rgba(7,18,10,0.98))] p-4 sm:p-5 md:p-6 shadow-[0_0_40px_rgba(16,185,129,0.08)]"
         >
           <h1 className="mb-5 sm:mb-6 text-center text-[24px] sm:text-[28px] md:text-3xl font-black text-white">دخول لوحة الإدارة</h1>
 
@@ -483,10 +580,12 @@ export default function AdminPage() {
             placeholder="اكتب كلمة السر"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mb-4 w-full rounded-2xl border border-green-900/50 bg-black/40 px-4 py-3 text-[16px] sm:text-[17px] md:text-base text-white outline-none"
+            className="mb-4 w-full rounded-2xl border border-emerald-500/20 bg-black/35 px-4 py-3 text-[16px] sm:text-[17px] md:text-base text-white outline-none"
           />
 
-          <button className="w-full rounded-2xl bg-green-500 py-3 text-[18px] sm:text-[19px] md:text-xl font-black text-black">دخول</button>
+          <button className="w-full rounded-2xl bg-emerald-500 py-3 text-[18px] sm:text-[19px] md:text-xl font-black text-black">
+            دخول
+          </button>
 
           {message && <p className="mt-4 text-center text-[14px] sm:text-[15px] md:text-base font-bold text-red-400">{message}</p>}
         </form>
@@ -499,21 +598,21 @@ export default function AdminPage() {
       <div className="mx-auto max-w-5xl space-y-6 sm:space-y-8">
         <div className="flex flex-col items-start justify-between gap-3 sm:gap-4 md:flex-row md:items-center">
           <div>
-            <h1 className="text-[28px] sm:text-[34px] md:text-4xl font-black">⚙️ لوحة الإدارة</h1>
-            <p className="mt-1.5 sm:mt-2 text-[15px] sm:text-[17px] md:text-xl text-gray-400">إضافة وإدارة أكواد التوقعات اليومية</p>
+            <h1 className="text-[26px] sm:text-[32px] md:text-4xl font-black text-white">⚙️ لوحة الإدارة</h1>
+            <p className="mt-1.5 sm:mt-2 text-[14px] sm:text-[16px] md:text-lg text-emerald-200/70">إضافة وإدارة الأكواد بشكل سريع ومريح</p>
           </div>
 
           {!showAddForm ? (
             <button
               onClick={() => setShowAddForm(true)}
-              className="w-full md:w-auto rounded-2xl bg-green-500 px-5 sm:px-6 md:px-8 py-3 sm:py-3.5 md:py-4 text-[18px] sm:text-[20px] md:text-2xl font-black text-black shadow-[0_0_25px_rgba(0,255,120,0.25)]"
+              className="w-full md:w-auto rounded-2xl bg-emerald-500 hover:bg-emerald-400 px-5 sm:px-6 md:px-8 py-3 sm:py-3.5 text-[17px] sm:text-[18px] md:text-xl font-black text-black shadow-[0_0_20px_rgba(16,185,129,0.22)]"
             >
               + إضافة كود
             </button>
           ) : (
             <button
               onClick={() => setShowAddForm(false)}
-              className="w-full md:w-auto rounded-2xl bg-green-500 px-5 sm:px-6 md:px-8 py-3 sm:py-3.5 md:py-4 text-[18px] sm:text-[20px] md:text-2xl font-black text-black shadow-[0_0_25px_rgba(0,255,120,0.25)]"
+              className="w-full md:w-auto rounded-2xl bg-emerald-500 hover:bg-emerald-400 px-5 sm:px-6 md:px-8 py-3 sm:py-3.5 text-[17px] sm:text-[18px] md:text-xl font-black text-black shadow-[0_0_20px_rgba(16,185,129,0.22)]"
             >
               ✕ إغلاق
             </button>
@@ -521,74 +620,74 @@ export default function AdminPage() {
         </div>
 
         {showAddForm && (
-          <div className="rounded-[24px] sm:rounded-[28px] md:rounded-[32px] border border-green-900/50 bg-[radial-gradient(circle_at_top,#0d2210,#071107)] p-4 sm:p-5 md:p-6 shadow-[0_0_40px_rgba(0,255,120,0.08)]">
-            <h2 className="mb-5 sm:mb-6 text-[26px] sm:text-[32px] md:text-4xl font-black">+ إضافة كود جديد</h2>
+          <SectionCard>
+            <h2 className="mb-5 sm:mb-6 text-[24px] sm:text-[28px] md:text-3xl font-black text-white">+ إضافة كود جديد</h2>
 
             <form onSubmit={handleAddCode} className="space-y-4 sm:space-y-5">
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="mb-2 block text-[15px] sm:text-[18px] md:text-xl text-gray-300">نوع التوقع (اختياري)</label>
+                  <label className="mb-2 block text-[14px] sm:text-[16px] md:text-lg text-emerald-100/80">نوع التوقع (اختياري)</label>
                   <input
                     value={tipOutcome}
                     onChange={(e) => setTipOutcome(e.target.value)}
                     placeholder="مثال: 1 أو X2 أو أقل من 7.5"
-                    className="w-full rounded-2xl border border-green-900/50 bg-black/40 px-4 py-3.5 md:py-4 text-[16px] sm:text-[18px] md:text-xl text-white outline-none"
+                    className="w-full rounded-2xl border border-emerald-500/20 bg-black/35 px-4 py-3 text-[15px] sm:text-[16px] md:text-lg text-white outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-[15px] sm:text-[18px] md:text-xl text-gray-300">نسبة ربح الكود</label>
+                  <label className="mb-2 block text-[14px] sm:text-[16px] md:text-lg text-emerald-100/80">نسبة ربح الكود</label>
                   <input
                     value={odds}
                     onChange={(e) => setOdds(e.target.value)}
                     placeholder="مثال: 1.75"
-                    className="w-full rounded-2xl border border-green-900/50 bg-black/40 px-4 py-3.5 md:py-4 text-[16px] sm:text-[18px] md:text-xl text-white outline-none"
+                    className="w-full rounded-2xl border border-emerald-500/20 bg-black/35 px-4 py-3 text-[15px] sm:text-[16px] md:text-lg text-white outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="mb-2 block text-[15px] sm:text-[18px] md:text-xl text-gray-300">وصف الكود (اختياري)</label>
+                <label className="mb-2 block text-[14px] sm:text-[16px] md:text-lg text-emerald-100/80">وصف الكود (اختياري)</label>
                 <input
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="اكتب وصف الرهان"
-                  className="w-full rounded-2xl border border-green-900/50 bg-black/40 px-4 py-3.5 md:py-4 text-[16px] sm:text-[18px] md:text-xl text-white outline-none"
+                  className="w-full rounded-2xl border border-emerald-500/20 bg-black/35 px-4 py-3 text-[15px] sm:text-[16px] md:text-lg text-white outline-none"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-[15px] sm:text-[18px] md:text-xl text-gray-300">الكود</label>
+                <label className="mb-2 block text-[14px] sm:text-[16px] md:text-lg text-emerald-100/80">الكود</label>
                 <input
                   value={tipCode}
                   onChange={(e) => setTipCode(e.target.value)}
                   placeholder="مثال: MC-ARS-2024"
-                  className="w-full rounded-2xl border border-green-900/50 bg-black/40 px-3 sm:px-4 py-3.5 md:py-4 text-center text-[22px] sm:text-[28px] md:text-3xl tracking-[0.12em] sm:tracking-[0.16em] md:tracking-[0.2em] text-white outline-none"
+                  className="w-full rounded-2xl border border-emerald-500/20 bg-black/35 px-3 sm:px-4 py-3 text-center text-[20px] sm:text-[24px] md:text-2xl tracking-[0.12em] sm:tracking-[0.14em] text-white outline-none"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-[15px] sm:text-[18px] md:text-xl text-gray-300">صورة الكود (إجباري)</label>
-                <label className="flex cursor-pointer items-center justify-center rounded-3xl border-2 border-dashed border-green-700/60 bg-[#071107] px-4 py-8 sm:py-9 md:py-10 text-[18px] sm:text-[22px] md:text-2xl text-gray-300">
+                <label className="mb-2 block text-[14px] sm:text-[16px] md:text-lg text-emerald-100/80">صورة الكود (إجباري)</label>
+                <label className="flex cursor-pointer items-center justify-center rounded-3xl border-2 border-dashed border-emerald-500/25 bg-black/20 px-4 py-7 sm:py-8 text-[16px] sm:text-[18px] md:text-xl text-emerald-100/70">
                   📸 رفع صورة للكود
                   <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                 </label>
 
-                {betImage && <p className="mt-3 text-[14px] sm:text-[16px] md:text-base text-green-400 break-all">{betImage.name}</p>}
+                {betImage && <p className="mt-3 text-[13px] sm:text-[14px] md:text-base text-emerald-400 break-all">{betImage.name}</p>}
 
                 {betImagePreview && (
-                  <div className="mt-4 overflow-hidden rounded-[24px] sm:rounded-[26px] md:rounded-[28px] border border-green-900/40 bg-black/20 p-3 sm:p-4">
-                    <p className="mb-3 text-[16px] sm:text-[18px] md:text-xl font-bold text-gray-300">معاينة الصورة قبل الإضافة</p>
-                    <img src={betImagePreview} alt="معاينة صورة الكود" className="mx-auto block max-h-[420px] md:max-h-[500px] w-full rounded-2xl object-contain" />
+                  <div className="mt-4 overflow-hidden rounded-[22px] sm:rounded-[24px] border border-emerald-500/15 bg-black/25 p-3 sm:p-4">
+                    <p className="mb-3 text-[14px] sm:text-[16px] md:text-lg font-bold text-emerald-100/80">معاينة الصورة قبل الإضافة</p>
+                    <img src={betImagePreview} alt="معاينة صورة الكود" className="mx-auto block max-h-[380px] md:max-h-[500px] w-full rounded-2xl object-contain" />
                   </div>
                 )}
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-2">
                 <button
                   type="submit"
                   disabled={savingCode}
-                  className="rounded-2xl bg-green-500 px-5 md:px-6 py-3.5 md:py-4 text-[22px] sm:text-[26px] md:text-3xl font-black text-black shadow-[0_0_25px_rgba(0,255,120,0.25)] disabled:opacity-60"
+                  className="rounded-2xl bg-emerald-500 hover:bg-emerald-400 px-5 py-3.5 text-[20px] sm:text-[22px] md:text-2xl font-black text-black shadow-[0_0_20px_rgba(16,185,129,0.22)] disabled:opacity-60"
                 >
                   {savingCode ? 'جاري الإضافة...' : '✅ إضافة الكود'}
                 </button>
@@ -596,179 +695,212 @@ export default function AdminPage() {
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="rounded-2xl border border-green-900/50 bg-black/30 px-5 md:px-6 py-3.5 md:py-4 text-[22px] sm:text-[26px] md:text-3xl font-black text-white"
+                  className="rounded-2xl border border-emerald-500/20 bg-black/25 px-5 py-3.5 text-[20px] sm:text-[22px] md:text-2xl font-black text-white"
                 >
                   إلغاء
                 </button>
               </div>
             </form>
-          </div>
+          </SectionCard>
         )}
 
-        <div className="rounded-[24px] sm:rounded-[28px] md:rounded-[32px] border border-green-900/50 bg-[radial-gradient(circle_at_top,#0d2210,#071107)] p-4 sm:p-5 md:p-6 shadow-[0_0_40px_rgba(0,255,120,0.08)]">
-          <h2 className="mb-5 sm:mb-6 md:mb-8 text-[26px] sm:text-[32px] md:text-4xl font-black">📊 إحصائيات اليوم</h2>
+        <SectionCard>
+          <h2 className="mb-4 sm:mb-5 text-[24px] sm:text-[28px] md:text-3xl font-black text-white">📊 إحصائيات اليوم</h2>
 
-          <div className="space-y-3 sm:space-y-4">
-            <div className="flex items-center justify-between rounded-[22px] sm:rounded-3xl border border-green-900/40 bg-black/40 px-4 sm:px-5 md:px-6 py-4 sm:py-5 md:py-6 gap-3">
-              <span className="text-[18px] sm:text-[24px] md:text-3xl text-gray-300">إجمالي الأكواد</span>
-              <span className="text-[34px] sm:text-[42px] md:text-5xl font-black text-white">{stats.totalCodes}</span>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between rounded-[20px] border border-emerald-500/15 bg-black/25 px-4 py-4 gap-3">
+              <span className="text-[15px] sm:text-[18px] md:text-2xl text-emerald-100/80">إجمالي الأكواد</span>
+              <span className="text-[28px] sm:text-[34px] md:text-4xl font-black text-white">{stats.totalCodes}</span>
             </div>
 
-            <div className="flex items-center justify-between rounded-[22px] sm:rounded-3xl border border-green-900/40 bg-black/40 px-4 sm:px-5 md:px-6 py-4 sm:py-5 md:py-6 gap-3">
-              <span className="text-[18px] sm:text-[24px] md:text-3xl text-gray-300">الأكواد الرابحة</span>
-              <span className="text-[34px] sm:text-[42px] md:text-5xl font-black text-green-400">{stats.wonCodes}</span>
+            <div className="flex items-center justify-between rounded-[20px] border border-emerald-500/15 bg-black/25 px-4 py-4 gap-3">
+              <span className="text-[15px] sm:text-[18px] md:text-2xl text-emerald-100/80">الأكواد الرابحة</span>
+              <span className="text-[28px] sm:text-[34px] md:text-4xl font-black text-emerald-400">{stats.wonCodes}</span>
             </div>
 
-            <div className="flex items-center justify-between rounded-[22px] sm:rounded-3xl border border-yellow-900/20 bg-black/40 px-4 sm:px-5 md:px-6 py-4 sm:py-5 md:py-6 gap-3">
-              <span className="text-[18px] sm:text-[24px] md:text-3xl text-gray-300">مجموع ربح الأكواد</span>
-              <span className="text-[30px] sm:text-[38px] md:text-5xl font-black text-yellow-400">{formatOdds(stats.combinedOdds)}</span>
+            <div className="flex items-center justify-between rounded-[20px] border border-yellow-500/15 bg-black/25 px-4 py-4 gap-3">
+              <span className="text-[15px] sm:text-[18px] md:text-2xl text-yellow-100/80">مجموع ربح الأكواد</span>
+              <span className="text-[24px] sm:text-[30px] md:text-4xl font-black text-yellow-400">{formatOdds(stats.combinedOdds)}</span>
             </div>
 
             <button
               onClick={handleEndDay}
-              className="mt-4 sm:mt-6 w-full rounded-[22px] sm:rounded-3xl bg-[#a88405] px-5 md:px-6 py-4 sm:py-4.5 md:py-5 text-[22px] sm:text-[26px] md:text-3xl font-black text-black shadow-[0_0_25px_rgba(234,179,8,0.18)]"
+              className="mt-3 w-full rounded-[20px] bg-yellow-500 hover:bg-yellow-400 px-5 py-4 text-[18px] sm:text-[20px] md:text-2xl font-black text-black shadow-[0_0_20px_rgba(234,179,8,0.18)]"
             >
               نهاية اليوم - أحسب الإحصائيات
             </button>
           </div>
-        </div>
+        </SectionCard>
 
         <div>
-          <h2 className="mb-4 sm:mb-5 md:mb-6 text-[26px] sm:text-[32px] md:text-4xl font-black">📋 أكواد اليوم النشطة ({codes.length})</h2>
+          <h2 className="mb-4 text-[24px] sm:text-[28px] md:text-3xl font-black text-white">📋 أكواد اليوم النشطة ({codes.length})</h2>
 
           {loading ? (
-            <div className="rounded-3xl border border-green-900/40 bg-black/30 p-8 sm:p-10 text-center text-[18px] sm:text-[22px] md:text-2xl text-gray-400">
-              جاري التحميل...
-            </div>
+            <SectionCard>
+              <div className="text-center text-[17px] sm:text-[19px] md:text-xl text-gray-400">جاري التحميل...</div>
+            </SectionCard>
           ) : codes.length === 0 ? (
-            <div className="rounded-3xl border border-green-900/40 bg-black/30 p-8 sm:p-10 text-center text-[18px] sm:text-[22px] md:text-2xl text-gray-400">
-              لا توجد أكواد اليوم
-            </div>
+            <SectionCard>
+              <div className="text-center text-[17px] sm:text-[19px] md:text-xl text-gray-400">لا توجد أكواد اليوم</div>
+            </SectionCard>
           ) : (
-            <div className="space-y-4 sm:space-y-5 md:space-y-6">
+            <div className="space-y-4">
               {codes.map((code) => (
-                <div
-                  key={code.id}
-                  className="rounded-[24px] sm:rounded-[28px] md:rounded-[32px] border border-green-900/50 bg-[radial-gradient(circle_at_top,#0d2210,#071107)] p-4 sm:p-5 md:p-6 shadow-[0_0_40px_rgba(0,255,120,0.08)]"
-                >
-                  <div className="mb-4 sm:mb-5 flex flex-wrap items-center justify-between gap-3">
-                    <div className="rounded-2xl border border-green-500/40 bg-green-500/10 px-4 sm:px-5 py-2.5 sm:py-3 text-[20px] sm:text-[24px] md:text-3xl font-black text-green-400">
+                <SectionCard key={code.id}>
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-[16px] sm:text-[18px] md:text-2xl font-black text-emerald-400">
                       {code.tip_outcome || 'بدون نوع'}
                     </div>
 
                     <div className="text-center w-full md:w-auto order-last md:order-none">
-                      <div className="text-[28px] sm:text-[38px] md:text-5xl font-black tracking-[0.12em] sm:tracking-[0.14em] md:tracking-[0.18em] break-all">{code.tip_code}</div>
+                      <div className="text-[22px] sm:text-[28px] md:text-4xl font-black tracking-[0.12em] sm:tracking-[0.14em] md:tracking-[0.16em] break-all text-white">
+                        {code.tip_code}
+                      </div>
                     </div>
 
-                    <div className="text-[28px] sm:text-[34px] md:text-4xl font-black text-yellow-400">x{formatOdds(code.odds)}</div>
+                    <div className="text-[22px] sm:text-[26px] md:text-3xl font-black text-yellow-400">x{formatOdds(code.odds)}</div>
                   </div>
 
                   {code.description && (
-                    <div className="mb-4 sm:mb-5 rounded-2xl border border-green-900/40 bg-black/30 px-4 sm:px-5 py-3 sm:py-4 text-[18px] sm:text-[22px] md:text-2xl text-gray-300">
+                    <div className="mb-4 rounded-2xl border border-emerald-500/15 bg-black/25 px-4 py-3 text-[15px] sm:text-[16px] md:text-xl text-gray-300">
                       {code.description}
                     </div>
                   )}
 
                   {getPublicUrl(code.code_image_url) && (
-                    <div className="mb-5 sm:mb-6 overflow-hidden rounded-[22px] sm:rounded-[24px] md:rounded-[28px] border border-green-900/40 bg-black/20 p-3 sm:p-4">
+                    <div className="mb-4 overflow-hidden rounded-[20px] border border-emerald-500/15 bg-black/20 p-3">
                       <img
                         src={getPublicUrl(code.code_image_url)!}
                         alt="صورة الرهان"
-                        className="mx-auto block max-h-[420px] md:max-h-[600px] w-full rounded-2xl object-contain"
+                        className="mx-auto block max-h-[380px] md:max-h-[520px] w-full rounded-2xl object-contain"
                       />
                     </div>
                   )}
 
-                  <div className="grid gap-3 sm:gap-4 md:grid-cols-3">
+                  <div className="grid gap-3 md:grid-cols-3">
                     <button
                       onClick={() => handleWinOrRefund(code, 'won')}
-                      className="rounded-2xl bg-green-600 px-4 sm:px-5 md:px-6 py-3.5 sm:py-4 text-[22px] sm:text-[26px] md:text-3xl font-black text-white"
+                      className="rounded-2xl bg-emerald-600 hover:bg-emerald-500 px-4 py-3 text-[18px] sm:text-[20px] md:text-2xl font-black text-white"
                     >
                       ✅ كسب
                     </button>
 
                     <button
                       onClick={() => handleWinOrRefund(code, 'refund')}
-                      className="rounded-2xl bg-blue-700 px-4 sm:px-5 md:px-6 py-3.5 sm:py-4 text-[22px] sm:text-[26px] md:text-3xl font-black text-white"
+                      className="rounded-2xl bg-sky-700 hover:bg-sky-600 px-4 py-3 text-[18px] sm:text-[20px] md:text-2xl font-black text-white"
                     >
                       📥 استرداد
                     </button>
 
                     <button
                       onClick={() => handleDelete(code)}
-                      className="rounded-2xl bg-red-900 px-4 sm:px-5 md:px-6 py-3.5 sm:py-4 text-[22px] sm:text-[26px] md:text-3xl font-black text-white"
+                      className="rounded-2xl bg-red-900 hover:bg-red-800 px-4 py-3 text-[18px] sm:text-[20px] md:text-2xl font-black text-white"
                     >
                       🗑️ حذف
                     </button>
                   </div>
-                </div>
+                </SectionCard>
               ))}
             </div>
           )}
         </div>
 
         <div>
-          <h2 className="mb-4 sm:mb-5 md:mb-6 text-[26px] sm:text-[32px] md:text-4xl font-black">🏆 أكواد اليوم الرابحة ({wonCodes.length})</h2>
+          <h2 className="mb-4 text-[24px] sm:text-[28px] md:text-3xl font-black text-white">🏆 أكواد اليوم الرابحة ({wonCodes.length})</h2>
 
           {loading ? (
-            <div className="rounded-3xl border border-green-900/40 bg-black/30 p-8 sm:p-10 text-center text-[18px] sm:text-[22px] md:text-2xl text-gray-400">
-              جاري التحميل...
-            </div>
+            <SectionCard>
+              <div className="text-center text-[17px] sm:text-[19px] md:text-xl text-gray-400">جاري التحميل...</div>
+            </SectionCard>
           ) : wonCodes.length === 0 ? (
-            <div className="rounded-3xl border border-green-900/40 bg-black/30 p-8 sm:p-10 text-center text-[18px] sm:text-[22px] md:text-2xl text-gray-400">
-              لا توجد أكواد رابحة اليوم
-            </div>
+            <SectionCard>
+              <div className="text-center text-[17px] sm:text-[19px] md:text-xl text-gray-400">لا توجد أكواد رابحة اليوم</div>
+            </SectionCard>
           ) : (
-            <div className="space-y-4 sm:space-y-5 md:space-y-6">
+            <div className="space-y-4">
               {wonCodes.map((code) => (
-                <div
-                  key={code.id}
-                  className="rounded-[24px] sm:rounded-[28px] md:rounded-[32px] border border-green-900/50 bg-[radial-gradient(circle_at_top,#0d2210,#071107)] p-4 sm:p-5 md:p-6 shadow-[0_0_40px_rgba(0,255,120,0.08)]"
-                >
-                  <div className="mb-4 sm:mb-5 flex flex-wrap items-center justify-between gap-3">
-                    <div className="rounded-2xl border border-green-500/40 bg-green-500/10 px-4 sm:px-5 py-2.5 sm:py-3 text-[20px] sm:text-[24px] md:text-3xl font-black text-green-400">
+                <SectionCard key={code.id}>
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-[16px] sm:text-[18px] md:text-2xl font-black text-emerald-400">
                       {code.tip_outcome || 'بدون نوع'}
                     </div>
 
                     <div className="text-center w-full md:w-auto order-last md:order-none">
-                      <div className="text-[28px] sm:text-[38px] md:text-5xl font-black tracking-[0.12em] sm:tracking-[0.14em] md:tracking-[0.18em] break-all">{code.tip_code}</div>
+                      <div className="text-[22px] sm:text-[28px] md:text-4xl font-black tracking-[0.12em] sm:tracking-[0.14em] md:tracking-[0.16em] break-all text-white">
+                        {code.tip_code}
+                      </div>
                     </div>
 
-                    <div className="rounded-2xl bg-green-500 px-4 sm:px-5 py-2.5 sm:py-3 text-[20px] sm:text-[24px] md:text-2xl font-black text-black">
+                    <div className="rounded-2xl bg-emerald-500 px-4 py-2 text-[16px] sm:text-[18px] md:text-xl font-black text-black">
                       {code.status === 'refund' ? '📥 استرداد' : '✅ كسب'}
                     </div>
                   </div>
 
+                  <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-yellow-500/15 bg-black/25 px-4 py-3">
+                    <span className="text-[14px] sm:text-[15px] md:text-lg text-yellow-100/80">نسبة الربح الحالية</span>
+                    <span className="text-[22px] sm:text-[24px] md:text-3xl font-black text-yellow-400">x{formatOdds(code.odds)}</span>
+                  </div>
+
                   {code.description && (
-                    <div className="mb-4 sm:mb-5 rounded-2xl border border-green-900/40 bg-black/30 px-4 sm:px-5 py-3 sm:py-4 text-[18px] sm:text-[22px] md:text-2xl text-gray-300">
+                    <div className="mb-4 rounded-2xl border border-emerald-500/15 bg-black/25 px-4 py-3 text-[15px] sm:text-[16px] md:text-xl text-gray-300">
                       {code.description}
                     </div>
                   )}
 
                   {getPublicUrl(code.code_image_url) && (
-                    <div className="mb-4 overflow-hidden rounded-[22px] sm:rounded-[24px] md:rounded-[28px] border border-green-900/40 bg-black/20 p-3 sm:p-4">
-                      <p className="mb-3 text-[16px] sm:text-[18px] md:text-xl font-bold text-gray-300">صورة الرهان</p>
+                    <div className="mb-4 overflow-hidden rounded-[20px] border border-emerald-500/15 bg-black/20 p-3">
+                      <p className="mb-2 text-[14px] sm:text-[15px] md:text-lg font-bold text-emerald-100/80">صورة الرهان</p>
                       <img
                         src={getPublicUrl(code.code_image_url)!}
                         alt="صورة الرهان"
-                        className="mx-auto block max-h-[420px] md:max-h-[600px] w-full rounded-2xl object-contain"
+                        className="mx-auto block max-h-[380px] md:max-h-[520px] w-full rounded-2xl object-contain"
                       />
                     </div>
                   )}
 
                   {getPublicUrl(code.proof_image_url) && (
-                    <div className="overflow-hidden rounded-[22px] sm:rounded-[24px] md:rounded-[28px] border border-green-900/40 bg-black/20 p-3 sm:p-4">
-                      <p className="mb-3 text-[16px] sm:text-[18px] md:text-xl font-bold text-gray-300">
+                    <div className="mb-4 overflow-hidden rounded-[20px] border border-emerald-500/15 bg-black/20 p-3">
+                      <p className="mb-2 text-[14px] sm:text-[15px] md:text-lg font-bold text-emerald-100/80">
                         {code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
                       </p>
                       <img
                         src={getPublicUrl(code.proof_image_url)!}
                         alt={code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
-                        className="mx-auto block max-h-[420px] md:max-h-[600px] w-full rounded-2xl object-contain"
+                        className="mx-auto block max-h-[380px] md:max-h-[520px] w-full rounded-2xl object-contain"
                       />
                     </div>
                   )}
-                </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <button
+                      onClick={() => handleEditWonOdds(code)}
+                      className="rounded-2xl bg-yellow-500 hover:bg-yellow-400 px-4 py-3 text-[16px] sm:text-[18px] md:text-xl font-black text-black"
+                    >
+                      ✏️ تعديل النسبة
+                    </button>
+
+                    <button
+                      onClick={() => handleChangeWonProofImage(code)}
+                      className="rounded-2xl bg-violet-600 hover:bg-violet-500 px-4 py-3 text-[16px] sm:text-[18px] md:text-xl font-black text-white"
+                    >
+                      🖼️ تغيير الصورة
+                    </button>
+
+                    <button
+                      onClick={() => handleToggleWonStatus(code)}
+                      className="rounded-2xl bg-sky-700 hover:bg-sky-600 px-4 py-3 text-[16px] sm:text-[18px] md:text-xl font-black text-white"
+                    >
+                      {code.status === 'won' ? '📥 تحويل لاسترداد' : '✅ تحويل لكسب'}
+                    </button>
+
+                    <button
+                      onClick={() => handleDelete(code)}
+                      className="rounded-2xl bg-red-900 hover:bg-red-800 px-4 py-3 text-[16px] sm:text-[18px] md:text-xl font-black text-white"
+                    >
+                      🗑️ حذف نهائي
+                    </button>
+                  </div>
+                </SectionCard>
               ))}
             </div>
           )}
@@ -777,14 +909,14 @@ export default function AdminPage() {
         <div className="flex justify-center">
           <button
             onClick={handleLogout}
-            className="w-full sm:w-auto rounded-2xl border border-red-500/40 bg-red-500/10 px-6 py-3 text-[18px] sm:text-[20px] md:text-2xl font-black text-red-400"
+            className="w-full sm:w-auto rounded-2xl border border-red-500/30 bg-red-500/10 px-6 py-3 text-[17px] sm:text-[18px] md:text-xl font-black text-red-400"
           >
             تسجيل خروج
           </button>
         </div>
 
         {message && (
-          <div className="rounded-2xl border border-green-700/40 bg-green-500/10 px-4 sm:px-5 py-4 text-center text-[15px] sm:text-[18px] md:text-xl font-black text-green-400 break-words">
+          <div className="rounded-2xl border border-emerald-500/15 bg-emerald-500/10 px-4 py-4 text-center text-[14px] sm:text-[16px] md:text-lg font-black text-emerald-300 break-words">
             {message}
           </div>
         )}
