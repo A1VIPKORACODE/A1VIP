@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'wouter';
 import { supabase, GIFT_URL, MELBET_TUTORIAL_URL, CODE_USAGE_URL } from '../lib/supabase';
 
+const AR_LATN_LOCALE = 'ar-EG-u-nu-latn';
+
 function normalizeStoragePath(path?: string | null) {
   if (!path) return null;
   let clean = String(path).trim();
@@ -60,7 +62,7 @@ function CodeCard({ code }: { code: any }) {
       <div className="p-5 space-y-4">
         <div className="flex items-center justify-between gap-3">
           <p className="text-gray-500 text-xs">
-            {new Date(code.createdAt).toLocaleDateString('ar-EG', {
+            {new Date(code.createdAt).toLocaleDateString(AR_LATN_LOCALE, {
               weekday: 'long',
               year: 'numeric',
               month: 'long',
