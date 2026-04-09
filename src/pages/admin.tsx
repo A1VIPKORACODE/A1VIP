@@ -1,614 +1,1046 @@
-import React, { useState, useRef } from "react";
-import { AdminGate } from "../components/admin-gate";
-import {
-  useListActiveCodes,
-  useCreateCode,
-  useMarkCodeWon,
-  useDeleteCode,
-  useGetTodayStats,
-  useFinalizeDay,
-  useStartNewDay,
-  getListActiveCodesQueryKey,
-  getGetTodayStatsQueryKey,
-  getGetYesterdayStatsQueryKey,
-} from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
+import React, { ChangeEvent, useEffect, useMemo, useState } from 'react';
+import { supabase } from '../lib/supabase';
 
-const BASE_URL = import.meta.env.BASE_URL.replace(/\/$/, "");
+const ADMIN_PASSWORD = 'AbanoubSamirRANDAHANY907&ANGLIabanoub907@#$';
+const STORAGE_KEY = 'admin_token_expires';
+const BUCKET = 'codes';
+const TOTAL_STORAGE_BYTES = 1024 * 1024 * 1024;
 
-function getImageUrl(path: string | null | undefined) {
+type CodeStatus = 'active' | 'won' | 'refund';
+
+type CodeItem = {
+  id: string;
+  description: string | null;
+  tip_outcome: string | null;
+  tip_code: string;
+  odds: number;
+  status: CodeStatus;
+  code_image_url: string | null;
+  proof_image_url: string | null;
+  proof_type: string | null;
+  created_at: string | null;
+  won_at: string | null;
+  day_date: string;
+};
+
+type DailyStat = {
+  id: string;
+  stat_date: string;
+  total_codes: number;
+  won_codes_count: number;
+  combined_odds: number;
+  is_finalized: boolean;
+};
+
+type StorageStats = {
+  usedBytes: number;
+  totalBytes: number;
+};
+
+function formatOdds(value: number) {
+  return Number(value || 0).toFixed(2);
+}
+
+function formatBytes(bytes: number) {
+  const gb = bytes / (1024 * 1024 * 1024);
+  const mb = bytes / (1024 * 1024);
+  if (gb >= 1) return `${gb.toFixed(2)} GB`;
+  return `${mb.toFixed(2)} MB`;
+}
+
+function addOneDay(dateStr: string) {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const utcDate = new Date(Date.UTC(year, month - 1, day));
+  utcDate.setUTCDate(utcDate.getUTCDate() + 1);
+  return utcDate.toISOString().slice(0, 10);
+}
+
+function getPublicUrl(path?: string | null) {
   if (!path) return null;
-  if (path.startsWith("http")) return path;
-  let clean = path;
-  if (clean.startsWith("/objects/")) clean = clean.slice("/objects/".length);
-  else if (clean.startsWith("objects/")) clean = clean.slice("objects/".length);
-  return `${BASE_URL}/api/storage/objects/${clean}`;
+  if (path.startsWith('http')) return path;
+  const clean = path.replace(/^\/+/, '').replace(/^codes\//, '');
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(clean);
+  return data.publicUrl;
 }
 
-async function uploadProofImage(file: File): Promise<string> {
-  const res = await fetch(`${BASE_URL}/api/storage/uploads/request-url`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
+function fileName(prefix: string, file: File) {
+  const ext = file.name.split('.').pop() || 'jpg';
+  const rand = Math.random().toString(36).slice(2, 10);
+  return `${prefix}/${Date.now()}-${rand}.${ext}`;
+}
+
+async function uploadImage(file: File, prefix: string) {
+  const path = fileName(prefix, file);
+  const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+    cacheControl: '3600',
+    upsert: false,
   });
-  if (!res.ok) throw new Error("Failed to get upload URL");
-  const { uploadURL, objectPath } = await res.json();
+  if (error) throw error;
+  return path;
+}
 
-  const uploadRes = await fetch(uploadURL, {
-    method: "PUT",
-    headers: { "Content-Type": file.type },
-    body: file,
+async function removeImage(path?: string | null) {
+  if (!path) return;
+  const clean = path
+    .replace(/^https?:\/\/[^/]+\/storage\/v1\/object\/public\/codes\//, '')
+    .replace(/^\/+/, '')
+    .replace(/^codes\//, '');
+  if (!clean) return;
+  await supabase.storage.from(BUCKET).remove([clean]);
+}
+
+async function listAllFiles(prefix = ''): Promise<any[]> {
+  const { data, error } = await supabase.storage.from(BUCKET).list(prefix, {
+    limit: 1000,
+    sortBy: { column: 'name', order: 'asc' },
   });
-  if (!uploadRes.ok) throw new Error("Failed to upload file");
-  return objectPath;
-}
+  if (error) throw error;
 
-function WinDialog({
-  codeId,
-  codeDesc,
-  onClose,
-  onWin,
-}: {
-  codeId: number;
-  codeDesc: string;
-  onClose: () => void;
-  onWin: (id: number, imageUrl: string | null) => void;
-}) {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [objectPath, setObjectPath] = useState<string | null>(null);
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setPreview(URL.createObjectURL(file));
-    setUploading(true);
-    try {
-      const path = await uploadProofImage(file);
-      setObjectPath(path);
-    } catch {
-      alert("فشل رفع الصورة");
-    } finally {
-      setUploading(false);
+  const files: any[] = [];
+  for (const item of data || []) {
+    if (!item) continue;
+    if (item.id) {
+      files.push({ ...item, fullPath: prefix ? `${prefix}/${item.name}` : item.name });
+    } else {
+      const childPrefix = prefix ? `${prefix}/${item.name}` : item.name;
+      const childFiles = await listAllFiles(childPrefix);
+      files.push(...childFiles);
     }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" dir="rtl">
-      <div className="bg-[#0f1a0f] border border-green-700/50 rounded-2xl w-full max-w-md p-6 space-y-5">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-black text-white">✅ تأكيد الكسب</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-white text-xl">✕</button>
-        </div>
-
-        <div className="bg-black/30 rounded-xl p-3 border border-green-900/40">
-          <p className="text-gray-400 text-sm">{codeDesc}</p>
-        </div>
-
-        <div>
-          <p className="text-sm font-bold text-gray-400 mb-3">📸 ارفع صورة إثبات الربح (اختياري)</p>
-          {preview && (
-            <img src={preview} alt="preview" className="w-full rounded-xl mb-3 h-auto border border-green-700/30" />
-          )}
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className="w-full border border-dashed border-green-700/40 text-green-400 font-bold py-3 rounded-xl hover:bg-green-500/10 transition-all text-sm"
-          >
-            {uploading ? "⏳ جاري الرفع..." : preview ? "🔄 تغيير الصورة" : "📂 اختر صورة"}
-          </button>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-        </div>
-
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 border border-gray-700 text-gray-400 font-bold py-3 rounded-xl hover:bg-gray-800 transition-all"
-          >
-            إلغاء
-          </button>
-          <button
-            onClick={() => onWin(codeId, objectPath)}
-            disabled={uploading}
-            className="flex-1 bg-green-500 hover:bg-green-400 text-black font-black py-3 rounded-xl transition-all shadow-[0_0_15px_rgba(34,197,94,0.3)]"
-          >
-            ✅ تأكيد الكسب
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  }
+  return files;
 }
 
-function CashOutDialog({
-  codeId,
-  codeDesc,
-  onClose,
-  onCashOut,
-}: {
-  codeId: number;
-  codeDesc: string;
-  onClose: () => void;
-  onCashOut: (id: number, imageUrl: string | null) => void;
-}) {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [objectPath, setObjectPath] = useState<string | null>(null);
+async function getStorageStats(): Promise<StorageStats> {
+  const files = await listAllFiles('');
+  const usedBytes = files.reduce((sum, file) => {
+    const size = Number(file.metadata?.size || file?.metadata?.size || file?.size || 0);
+    return sum + size;
+  }, 0);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setPreview(URL.createObjectURL(file));
-    setUploading(true);
-    try {
-      const path = await uploadProofImage(file);
-      setObjectPath(path);
-    } catch {
-      alert("فشل رفع الصورة");
-    } finally {
-      setUploading(false);
-    }
+  return {
+    usedBytes,
+    totalBytes: TOTAL_STORAGE_BYTES,
   };
-
-  return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" dir="rtl">
-      <div className="bg-[#0f1a0f] border border-blue-700/50 rounded-2xl w-full max-w-md p-6 space-y-5">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-black text-white">📥 تأكيد الاستيراد</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-white text-xl">✕</button>
-        </div>
-
-        <div className="bg-black/30 rounded-xl p-3 border border-blue-900/40">
-          <p className="text-blue-300 text-sm font-bold">⚠️ سيتم تحويل نسبة ربح الكود إلى 1 تلقائياً</p>
-          <p className="text-gray-400 text-sm mt-1">{codeDesc}</p>
-        </div>
-
-        <div>
-          <p className="text-sm font-bold text-gray-400 mb-3">📸 ارفع صورة إثبات استيراد القسيمة</p>
-          {preview && (
-            <img src={preview} alt="preview" className="w-full rounded-xl mb-3 h-auto border border-blue-700/30" />
-          )}
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className="w-full border border-dashed border-blue-700/40 text-blue-400 font-bold py-3 rounded-xl hover:bg-blue-500/10 transition-all text-sm"
-          >
-            {uploading ? "⏳ جاري الرفع..." : preview ? "🔄 تغيير الصورة" : "📂 اختر صورة إثبات"}
-          </button>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-        </div>
-
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 border border-gray-700 text-gray-400 font-bold py-3 rounded-xl hover:bg-gray-800 transition-all"
-          >
-            إلغاء
-          </button>
-          <button
-            onClick={() => onCashOut(codeId, objectPath)}
-            disabled={uploading}
-            className="flex-1 bg-blue-500 hover:bg-blue-400 text-black font-black py-3 rounded-xl transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)]"
-          >
-            📥 تأكيد الاستيراد
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 }
 
-function DayStats({ stats, codes, onFinalize, onNewDay, finalizing, startingNew }: {
-  stats: any;
-  codes: any[];
-  onFinalize: () => void;
-  onNewDay: () => void;
-  finalizing: boolean;
-  startingNew: boolean;
-}) {
-  const totalCodes = parseFloat(stats?.totalCodes || "0");
-  const wonCount = parseFloat(stats?.wonCodesCount || "0");
-  const combinedOdds = parseFloat(stats?.combinedOdds || "1");
-  const profit1000 = Math.round(1000 * combinedOdds);
-  const sumOdds = codes.reduce((acc, c) => acc + parseFloat(c.odds || "0"), 0);
-
+function SectionCard({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-gradient-to-br from-[#0f1a0f] to-[#0a120a] border border-green-900/40 rounded-2xl p-6 space-y-5">
-      <div className="flex items-center justify-between">
-        <h3 className="font-black text-lg text-white">📊 إحصائيات اليوم</h3>
-        {stats?.isFinalized && (
-          <span className="bg-green-500/20 border border-green-500/40 text-green-400 text-xs font-bold px-2 py-0.5 rounded-full">مكتمل</span>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-3" dir="rtl">
-        <div className="flex items-center justify-between bg-black/30 rounded-xl px-5 py-3 border border-green-900/30">
-          <div className="text-sm text-gray-400 font-bold">إجمالي الأكواد</div>
-          <div className="text-2xl font-black text-white">{totalCodes}</div>
-        </div>
-        <div className="flex items-center justify-between bg-black/30 rounded-xl px-5 py-3 border border-green-900/30">
-          <div className="text-sm text-gray-400 font-bold">الأكواد الرابحة</div>
-          <div className="text-2xl font-black text-green-400">{wonCount}</div>
-        </div>
-        <div className="flex items-center justify-between bg-black/30 rounded-xl px-5 py-3 border border-yellow-900/30">
-          <div className="text-sm text-gray-400 font-bold">مجموع ربح الأكواد</div>
-          <div className="text-2xl font-black text-yellow-400">{sumOdds.toFixed(2)}</div>
-        </div>
-      </div>
-
-      {totalCodes > 0 && (
-        <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-center" dir="rtl">
-          <p className="text-sm text-gray-400 mb-1">مثال الربح — لو راميت 1000 جنيه على أكواد النهاردة</p>
-          <p className="text-2xl font-black text-green-400">{Math.round(1000 * sumOdds).toLocaleString("en-US")} جنيه</p>
-          <p className="text-xs text-gray-600">= 1000 × {sumOdds.toFixed(4)}</p>
-        </div>
-      )}
-
-      <div className="flex gap-3 flex-col sm:flex-row">
-        {!stats?.isFinalized ? (
-          <button
-            onClick={onFinalize}
-            disabled={finalizing || totalCodes === 0}
-            className="flex-1 bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-3 rounded-xl transition-all text-sm shadow-[0_0_15px_rgba(234,179,8,0.2)]"
-          >
-            {finalizing ? "⏳ جاري الحساب..." : "🌙 نهاية اليوم - احسب الإحصائيات"}
-          </button>
-        ) : (
-          <button
-            onClick={onNewDay}
-            disabled={startingNew}
-            className="flex-1 bg-green-500 hover:bg-green-400 disabled:opacity-50 text-black font-black py-3 rounded-xl transition-all text-sm shadow-[0_0_15px_rgba(34,197,94,0.2)]"
-          >
-            {startingNew ? "⏳ جاري البدء..." : "🌅 بداية يوم جديد"}
-          </button>
-        )}
-      </div>
+    <div className="rounded-[18px] sm:rounded-[18px] md:rounded-[18px] sm:rounded-[20px] border border-emerald-500/20 bg-[linear-gradient(180deg,rgba(16,40,24,0.96),rgba(7,18,10,0.98))] p-3 sm:p-3.5 md:p-4 shadow-[0_0_22px_rgba(16,185,129,0.07)]">
+      {children}
     </div>
   );
 }
 
 export default function AdminPage() {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const [authorized, setAuthorized] = useState(false);
+  const [password, setPassword] = useState('');
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [storageStats, setStorageStats] = useState<StorageStats>({ usedBytes: 0, totalBytes: TOTAL_STORAGE_BYTES });
 
-  const { data: codes, isLoading } = useListActiveCodes();
-  const { data: todayStats } = useGetTodayStats();
+  const [codes, setCodes] = useState<CodeItem[]>([]);
+  const [wonCodes, setWonCodes] = useState<CodeItem[]>([]);
+  const [dailyStats, setDailyStats] = useState<DailyStat | null>(null);
+  const [currentDay, setCurrentDay] = useState('');
 
-  const createCode = useCreateCode();
-  const markWon = useMarkCodeWon();
-  const deleteCode = useDeleteCode();
-  const finalizeDay = useFinalizeDay();
-  const startNewDay = useStartNewDay();
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [description, setDescription] = useState('');
+  const [tipOutcome, setTipOutcome] = useState('');
+  const [tipCode, setTipCode] = useState('');
+  const [odds, setOdds] = useState('');
+  const [betImage, setBetImage] = useState<File | null>(null);
+  const [betImagePreview, setBetImagePreview] = useState<string | null>(null);
+  const [savingCode, setSavingCode] = useState(false);
 
-  const [showForm, setShowForm] = useState(false);
-  const [winDialog, setWinDialog] = useState<{ id: number; desc: string } | null>(null);
-  const [cashOutDialog, setCashOutDialog] = useState<{ id: number; desc: string } | null>(null);
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved && Number(saved) > Date.now()) {
+      setAuthorized(true);
+    }
+  }, []);
 
-  const [form, setForm] = useState({
-    tipOutcome: "",
-    tipCode: "",
-    odds: "",
-  });
-  const [codeImageFile, setCodeImageFile] = useState<File | null>(null);
-  const [codeImagePreview, setCodeImagePreview] = useState<string | null>(null);
-  const [codeImageUploading, setCodeImageUploading] = useState(false);
-  const [codeImagePath, setCodeImagePath] = useState<string | null>(null);
-  const codeImageRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (authorized) loadAll();
+  }, [authorized]);
 
-  const handleCodeImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setCodeImageFile(file);
-    setCodeImagePreview(URL.createObjectURL(file));
-    setCodeImageUploading(true);
+  useEffect(() => {
+    return () => {
+      if (betImagePreview) URL.revokeObjectURL(betImagePreview);
+    };
+  }, [betImagePreview]);
+
+  async function ensureCurrentDay() {
+    const { data, error } = await supabase.from('app_state').select('*').eq('key', 'current_day').maybeSingle();
+    if (error) throw error;
+
+    if (data?.value && /^\d{4}-\d{2}-\d{2}$/.test(data.value)) {
+      return data.value as string;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+
+    if (data?.key === 'current_day') {
+      const { error: updateError } = await supabase.from('app_state').update({ value: today }).eq('key', 'current_day');
+      if (updateError) throw updateError;
+      return today;
+    }
+
+    const { error: insertError } = await supabase.from('app_state').insert([{ key: 'current_day', value: today }]);
+    if (insertError) throw insertError;
+    return today;
+  }
+
+  async function ensureDailyStats(day: string) {
+    const { data, error } = await supabase.from('daily_stats').select('*').eq('stat_date', day).maybeSingle();
+    if (error) throw error;
+
+    if (data) return data as DailyStat;
+
+    const { data: inserted, error: insertError } = await supabase
+      .from('daily_stats')
+      .insert([
+        {
+          stat_date: day,
+          total_codes: 0,
+          won_codes_count: 0,
+          combined_odds: 0,
+          is_finalized: false,
+        },
+      ])
+      .select()
+      .single();
+
+    if (insertError) throw insertError;
+    return inserted as DailyStat;
+  }
+
+  async function recalcDayStats(day: string) {
+    const { data, error } = await supabase.from('codes').select('*').eq('day_date', day);
+    if (error) throw error;
+
+    const rows = (data || []) as CodeItem[];
+    const totalCodes = rows.length;
+    const wonCount = rows.filter((c) => c.status === 'won' || c.status === 'refund').length;
+    const combinedOdds = rows.reduce((sum, c) => sum + Number(c.odds || 0), 0);
+
+    const { error: upError } = await supabase
+      .from('daily_stats')
+      .upsert(
+        [
+          {
+            stat_date: day,
+            total_codes: totalCodes,
+            won_codes_count: wonCount,
+            combined_odds: Number(combinedOdds.toFixed(2)),
+            is_finalized: false,
+          },
+        ],
+        { onConflict: 'stat_date' },
+      );
+
+    if (upError) throw upError;
+  }
+
+  async function cleanupOldWonCodes() {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    const cutoffStr = cutoff.toISOString();
+
+    const { data, error } = await supabase
+      .from('codes')
+      .select('*')
+      .in('status', ['won', 'refund'])
+      .lt('won_at', cutoffStr);
+
+    if (error) return;
+
+    for (const row of data || []) {
+      await removeImage(row.code_image_url);
+      await removeImage(row.proof_image_url);
+      await supabase.from('codes').delete().eq('id', row.id);
+    }
+  }
+
+  async function cleanupStorageOlderThan30Days() {
+    const files = await listAllFiles('');
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+
+    const toDelete = files
+      .filter((file) => {
+        const createdAt = file.created_at || file.updated_at;
+        if (!createdAt) return false;
+        return new Date(createdAt) < cutoff;
+      })
+      .map((file) => file.fullPath)
+      .filter(Boolean);
+
+    if (toDelete.length > 0) {
+      await supabase.storage.from(BUCKET).remove(toDelete);
+    }
+  }
+
+  async function refreshStorageStats() {
     try {
-      const path = await uploadProofImage(file);
-      setCodeImagePath(path);
-    } catch {
-      toast({ title: "خطأ", description: "فشل رفع الصورة", variant: "destructive" });
+      const stats = await getStorageStats();
+      setStorageStats(stats);
+    } catch (err) {
+      console.error('STORAGE STATS ERROR:', err);
+    }
+  }
+
+  async function loadAll() {
+    try {
+      setLoading(true);
+      setMessage('');
+
+      await cleanupOldWonCodes();
+      await cleanupStorageOlderThan30Days();
+
+      const day = await ensureCurrentDay();
+      setCurrentDay(day);
+
+      await ensureDailyStats(day);
+      await recalcDayStats(day);
+
+      const [
+        { data: activeData, error: activeError },
+        { data: wonData, error: wonError },
+        { data: statsData, error: statsError },
+      ] = await Promise.all([
+        supabase.from('codes').select('*').eq('day_date', day).eq('status', 'active').order('created_at', { ascending: false }),
+        supabase.from('codes').select('*').eq('day_date', day).in('status', ['won', 'refund']).order('won_at', { ascending: false }),
+        supabase.from('daily_stats').select('*').eq('stat_date', day).maybeSingle(),
+      ]);
+
+      if (activeError) throw activeError;
+      if (wonError) throw wonError;
+      if (statsError) throw statsError;
+
+      setCodes((activeData || []) as CodeItem[]);
+      setWonCodes((wonData || []) as CodeItem[]);
+      setDailyStats((statsData as DailyStat) || null);
+      await refreshStorageStats();
+    } catch (err: any) {
+      setMessage(`حصل خطأ أثناء تحميل البيانات: ${err?.message || 'unknown error'}`);
     } finally {
-      setCodeImageUploading(false);
+      setLoading(false);
+    }
+  }
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === ADMIN_PASSWORD) {
+      const expiresAt = Date.now() + 12 * 60 * 60 * 1000;
+      localStorage.setItem(STORAGE_KEY, String(expiresAt));
+      setAuthorized(true);
+      setMessage('');
+    } else {
+      setMessage('كلمة السر غير صحيحة');
     }
   };
 
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: getListActiveCodesQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getGetTodayStatsQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getGetYesterdayStatsQueryKey() });
+  const handleLogout = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    setAuthorized(false);
+    setPassword('');
+    setMessage('');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const resetForm = () => {
+    setDescription('');
+    setTipOutcome('');
+    setTipCode('');
+    setOdds('');
+    setBetImage(null);
+    if (betImagePreview) URL.revokeObjectURL(betImagePreview);
+    setBetImagePreview(null);
+    setShowAddForm(false);
+  };
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setBetImage(file);
+
+    if (betImagePreview) URL.revokeObjectURL(betImagePreview);
+
+    if (file) {
+      setBetImagePreview(URL.createObjectURL(file));
+    } else {
+      setBetImagePreview(null);
+    }
+  };
+
+  const handleAddCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.tipCode || !form.odds) {
-      toast({ title: "خطأ", description: "يرجى ملء الكود ونسبة ربح الكود", variant: "destructive" });
+
+    if (!tipCode.trim() || !odds.trim() || !betImage) {
+      setMessage('اكتب الكود ونسبة الربح وارفع صورة الرهان');
       return;
     }
-    createCode.mutate(
-      { data: { ...form, description: "", odds: parseFloat(form.odds), codeImageUrl: codeImagePath || undefined } },
-      {
-        onSuccess: () => {
-          toast({ title: "✅ تم الإضافة", description: "تم إضافة الكود بنجاح" });
-          setForm({ tipOutcome: "", tipCode: "", odds: "" });
-          setCodeImageFile(null);
-          setCodeImagePreview(null);
-          setCodeImagePath(null);
-          setShowForm(false);
-          invalidate();
-        },
-        onError: () => toast({ title: "خطأ", description: "فشل إضافة الكود", variant: "destructive" }),
-      }
-    );
-  };
 
-  const handleWin = (id: number, imageUrl: string | null) => {
-    markWon.mutate(
-      { id, data: { proofImageUrl: imageUrl } },
-      {
-        onSuccess: () => {
-          toast({ title: "🏆 رابح!", description: "تم تحديد الكود كرابح" });
-          setWinDialog(null);
-          invalidate();
-        },
-        onError: () => toast({ title: "خطأ", description: "فشل تحديث الكود", variant: "destructive" }),
-      }
-    );
-  };
-
-  const handleDelete = (id: number) => {
-    if (!confirm("هل أنت متأكد من حذف هذا الكود؟")) return;
-    deleteCode.mutate(
-      { id },
-      {
-        onSuccess: () => {
-          toast({ title: "🗑️ تم الحذف", description: "تم حذف الكود نهائياً" });
-          invalidate();
-        },
-        onError: () => toast({ title: "خطأ", description: "فشل حذف الكود", variant: "destructive" }),
-      }
-    );
-  };
-
-  const handleCashOut = async (id: number, imageUrl: string | null) => {
     try {
-      const res = await fetch(`${BASE_URL}/api/codes/${id}/cash-out`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ proofImageUrl: imageUrl }),
-      });
-      if (!res.ok) throw new Error();
-      toast({ title: "📥 تم الاستيراد", description: "تم تحويل الكود واستيراد القسيمة بنسبة ربح 1" });
-      setCashOutDialog(null);
-      invalidate();
-    } catch {
-      toast({ title: "خطأ", description: "فشل الاستيراد", variant: "destructive" });
+      setSavingCode(true);
+      setMessage('');
+
+      const uploadedPath = await uploadImage(betImage, 'bet-images');
+
+      const { error } = await supabase.from('codes').insert([
+        {
+          description: description.trim() || null,
+          tip_outcome: tipOutcome.trim() || null,
+          tip_code: tipCode.trim(),
+          odds: Number(odds),
+          status: 'active',
+          code_image_url: uploadedPath,
+          proof_image_url: null,
+          proof_type: null,
+          day_date: currentDay,
+        },
+      ]);
+
+      if (error) throw error;
+
+      await recalcDayStats(currentDay);
+      await loadAll();
+      resetForm();
+      setMessage('تمت إضافة الكود بنجاح');
+    } catch (err: any) {
+      setMessage(`حصل خطأ أثناء إضافة الكود: ${err?.message || 'unknown error'}`);
+    } finally {
+      setSavingCode(false);
     }
   };
 
-  const handleFinalize = () => {
-    finalizeDay.mutate(undefined, {
-      onSuccess: () => {
-        toast({ title: "🌙 نهاية اليوم", description: "تم حساب إحصائيات اليوم بنجاح" });
-        invalidate();
-      },
-      onError: () => toast({ title: "خطأ", description: "فشل حساب الإحصائيات", variant: "destructive" }),
+  const moveCodeLocally = (codeId: string, nextStatus: 'won' | 'refund', proofPath: string) => {
+    setCodes((prev) => {
+      const found = prev.find((c) => c.id === codeId);
+      if (!found) return prev;
+      const updated = {
+        ...found,
+        status: nextStatus,
+        proof_image_url: proofPath,
+        proof_type: nextStatus,
+        won_at: new Date().toISOString(),
+        odds: nextStatus === 'refund' ? 1 : found.odds,
+      };
+      setWonCodes((prevWon) => [updated, ...prevWon]);
+      return prev.filter((c) => c.id !== codeId);
     });
   };
 
-  const handleNewDay = () => {
-    startNewDay.mutate(undefined, {
-      onSuccess: () => {
-        toast({ title: "🌅 يوم جديد", description: "تم أرشفة إحصائيات الأمس وبدأ يوم جديد" });
-        invalidate();
-      },
-      onError: () => toast({ title: "خطأ", description: "فشل بدء اليوم الجديد", variant: "destructive" }),
-    });
+  const handleWinOrRefund = async (code: CodeItem, nextStatus: 'won' | 'refund') => {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+
+    fileInput.onchange = async () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
+
+      try {
+        setMessage('');
+
+        const uploadedPath = await uploadImage(file, nextStatus === 'won' ? 'proof-win' : 'proof-refund');
+
+        const payload: Partial<CodeItem> & { proof_type: string; won_at: string } = {
+          status: nextStatus,
+          proof_image_url: uploadedPath,
+          proof_type: nextStatus,
+          won_at: new Date().toISOString(),
+        };
+
+        if (nextStatus === 'refund') {
+          payload.odds = 1;
+        }
+
+        const { error } = await supabase.from('codes').update(payload).eq('id', code.id);
+        if (error) throw error;
+
+        moveCodeLocally(code.id, nextStatus, uploadedPath);
+        await recalcDayStats(currentDay);
+        await loadAll();
+        setMessage(nextStatus === 'won' ? 'تم تعليم الكود كرابح' : 'تم تعليم الكود كمسترد');
+      } catch (err: any) {
+        setMessage(
+          nextStatus === 'won'
+            ? `حصل خطأ أثناء رفع إثبات الكسب: ${err?.message || 'unknown error'}`
+            : `حصل خطأ أثناء رفع إثبات الاسترداد: ${err?.message || 'unknown error'}`
+        );
+      }
+    };
+
+    fileInput.click();
   };
 
+  const handleEditWonOdds = async (code: CodeItem) => {
+    const value = window.prompt('اكتب نسبة الربح الجديدة', String(code.odds ?? 1));
+    if (!value) return;
+
+    const parsed = Number(value);
+    if (Number.isNaN(parsed) || parsed <= 0) {
+      setMessage('اكتب رقم صحيح أكبر من 0');
+      return;
+    }
+
+    try {
+      setMessage('');
+      const { error } = await supabase.from('codes').update({ odds: parsed }).eq('id', code.id);
+      if (error) throw error;
+
+      setWonCodes((prev) => prev.map((item) => (item.id === code.id ? { ...item, odds: parsed } : item)));
+      await recalcDayStats(currentDay);
+      await loadAll();
+      setMessage('تم تعديل نسبة الربح');
+    } catch (err: any) {
+      setMessage(`حصل خطأ أثناء تعديل النسبة: ${err?.message || 'unknown error'}`);
+    }
+  };
+
+  const handleChangeWonProofImage = async (code: CodeItem) => {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+
+    fileInput.onchange = async () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
+
+      try {
+        setMessage('');
+
+        const uploadedPath = await uploadImage(file, code.status === 'refund' ? 'proof-refund' : 'proof-win');
+        const oldPath = code.proof_image_url;
+
+        const { error } = await supabase.from('codes').update({ proof_image_url: uploadedPath }).eq('id', code.id);
+        if (error) throw error;
+
+        if (oldPath) await removeImage(oldPath);
+
+        setWonCodes((prev) => prev.map((item) => (item.id === code.id ? { ...item, proof_image_url: uploadedPath } : item)));
+        await loadAll();
+        setMessage('تم تغيير الصورة بنجاح');
+      } catch (err: any) {
+        setMessage(`حصل خطأ أثناء تغيير الصورة: ${err?.message || 'unknown error'}`);
+      }
+    };
+
+    fileInput.click();
+  };
+
+  const handleToggleWonStatus = async (code: CodeItem) => {
+    const nextStatus: CodeStatus = code.status === 'won' ? 'refund' : 'won';
+    const payload: Partial<CodeItem> & { proof_type: string } = {
+      status: nextStatus,
+      proof_type: nextStatus,
+      odds: nextStatus === 'refund' ? 1 : code.odds,
+    };
+
+    try {
+      setMessage('');
+      const { error } = await supabase.from('codes').update(payload).eq('id', code.id);
+      if (error) throw error;
+
+      setWonCodes((prev) =>
+        prev.map((item) =>
+          item.id === code.id
+            ? {
+                ...item,
+                status: nextStatus,
+                proof_type: nextStatus,
+                odds: nextStatus === 'refund' ? 1 : item.odds,
+              }
+            : item,
+        ),
+      );
+
+      await recalcDayStats(currentDay);
+      await loadAll();
+      setMessage(nextStatus === 'refund' ? 'تم تحويل الحالة إلى استرداد' : 'تم تحويل الحالة إلى كسب');
+    } catch (err: any) {
+      setMessage(`حصل خطأ أثناء تغيير الحالة: ${err?.message || 'unknown error'}`);
+    }
+  };
+
+  const handleDelete = async (code: CodeItem) => {
+    const ok = window.confirm('هل أنت متأكد من حذف الكود نهائيًا؟');
+    if (!ok) return;
+
+    try {
+      setMessage('');
+
+      await removeImage(code.code_image_url);
+      await removeImage(code.proof_image_url);
+
+      const { error } = await supabase.from('codes').delete().eq('id', code.id);
+      if (error) throw error;
+
+      setCodes((prev) => prev.filter((c) => c.id !== code.id));
+      setWonCodes((prev) => prev.filter((c) => c.id !== code.id));
+
+      await recalcDayStats(currentDay);
+      await loadAll();
+      setMessage('تم حذف الكود نهائيًا');
+    } catch (err: any) {
+      setMessage(`حصل خطأ أثناء حذف الكود: ${err?.message || 'unknown error'}`);
+    }
+  };
+
+  const handleEndDay = async () => {
+    const ok = window.confirm('هل تريد إنهاء اليوم الحالي وبدء يوم جديد؟');
+    if (!ok) return;
+
+    try {
+      setMessage('');
+
+      await recalcDayStats(currentDay);
+
+      const { error: finalizeError } = await supabase
+        .from('daily_stats')
+        .update({ is_finalized: true })
+        .eq('stat_date', currentDay);
+
+      if (finalizeError) throw finalizeError;
+
+      const newDay = addOneDay(currentDay);
+
+      const { error: upsertStateError } = await supabase
+        .from('app_state')
+        .upsert([{ key: 'current_day', value: newDay }], { onConflict: 'key' });
+
+      if (upsertStateError) throw upsertStateError;
+
+      await ensureDailyStats(newDay);
+
+      const { data: verifyState, error: verifyError } = await supabase
+        .from('app_state')
+        .select('value')
+        .eq('key', 'current_day')
+        .single();
+
+      if (verifyError) throw verifyError;
+      if (verifyState?.value !== newDay) {
+        throw new Error(`فشل حفظ اليوم الجديد. القيمة الحالية: ${verifyState?.value || 'فارغة'}`);
+      }
+
+      setCurrentDay(newDay);
+      setCodes([]);
+      setWonCodes([]);
+      setDailyStats({
+        id: '',
+        stat_date: newDay,
+        total_codes: 0,
+        won_codes_count: 0,
+        combined_odds: 0,
+        is_finalized: false,
+      });
+
+      setMessage(`تم إنهاء اليوم بنجاح. اليوم الجديد هو: ${newDay}`);
+    } catch (err: any) {
+      setMessage(`حصل خطأ أثناء إنهاء اليوم: ${err?.message || 'unknown error'}`);
+    }
+  };
+
+  const stats = useMemo(() => {
+    return {
+      totalCodes: dailyStats?.total_codes ?? 0,
+      wonCodes: dailyStats?.won_codes_count ?? 0,
+      combinedOdds: dailyStats?.combined_odds ?? 0,
+    };
+  }, [dailyStats]);
+
+  const usedPercent = Math.min(100, (storageStats.usedBytes / storageStats.totalBytes) * 100);
+
+  if (!authorized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#040a04] px-3 sm:px-4" dir="rtl" style={{ fontFamily: "'Cairo', 'Tajawal', sans-serif" }}>
+        <form
+          onSubmit={handleLogin}
+          className="w-full max-w-md rounded-[18px] sm:rounded-[20px] sm:rounded-[28px] md:rounded-[32px] border border-emerald-500/20 bg-[linear-gradient(180deg,rgba(16,40,24,0.96),rgba(7,18,10,0.98))] p-4 sm:p-5 md:p-6 shadow-[0_0_40px_rgba(16,185,129,0.08)]"
+        >
+          <h1 className="mb-5 sm:mb-6 text-center text-[20px] sm:text-[23px] md:text-[26px] font-black text-white">دخول لوحة الإدارة</h1>
+
+          <input
+            type="password"
+            placeholder="اكتب كلمة السر"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="mb-4 w-full rounded-[16px] sm:rounded-[18px] border border-emerald-500/20 bg-black/35 px-3 py-2.5 text-[14px] sm:text-[15px] md:text-[15px] text-white outline-none"
+          />
+
+          <button className="w-full rounded-[16px] sm:rounded-[18px] bg-emerald-500 py-3 text-[16px] sm:text-[17px] md:text-[18px] font-black text-black">
+            دخول
+          </button>
+
+          {message && <p className="mt-4 text-center text-[13px] sm:text-[14px] md:text-[14px] font-bold text-red-400">{message}</p>}
+        </form>
+      </div>
+    );
+  }
 
   return (
-    <AdminGate>
-    <div className="space-y-8 max-w-4xl mx-auto" dir="rtl">
-      {winDialog && (
-        <WinDialog
-          codeId={winDialog.id}
-          codeDesc={winDialog.desc}
-          onClose={() => setWinDialog(null)}
-          onWin={handleWin}
-        />
-      )}
-      {cashOutDialog && (
-        <CashOutDialog
-          codeId={cashOutDialog.id}
-          codeDesc={cashOutDialog.desc}
-          onClose={() => setCashOutDialog(null)}
-          onCashOut={handleCashOut}
-        />
-      )}
-
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black text-white">⚙️ لوحة الإدارة</h1>
-          <p className="text-gray-500 text-sm mt-1">إضافة وإدارة أكواد التوقعات اليومية</p>
-        </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 bg-green-500 hover:bg-green-400 text-black font-black px-4 py-2 rounded-xl transition-all shadow-[0_0_15px_rgba(34,197,94,0.3)] text-sm"
-        >
-          {showForm ? "✕ إغلاق" : "➕ إضافة كود"}
-        </button>
-      </div>
-
-      {showForm && (
-        <div className="bg-gradient-to-br from-[#0f1a0f] to-[#0a120a] border border-green-700/50 rounded-2xl p-6">
-          <h3 className="font-black text-lg text-white mb-5">➕ إضافة كود جديد</h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">نوع التوقع <span className="text-gray-600 normal-case">(اختياري)</span></label>
-                <input
-                  value={form.tipOutcome}
-                  onChange={(e) => setForm({ ...form, tipOutcome: e.target.value })}
-                  placeholder="مثال: 1 أو X2 أو فوز الضيف"
-                  className="w-full bg-black/50 border border-green-900/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500/60 placeholder-gray-700"
-                  dir="rtl"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">نسبة ربح الكود</label>
-                <input
-                  value={form.odds}
-                  onChange={(e) => setForm({ ...form, odds: e.target.value })}
-                  placeholder="مثال: 1.75"
-                  type="number"
-                  step="0.001"
-                  min="1"
-                  className="w-full bg-black/50 border border-green-900/50 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-green-500/60"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">الكود</label>
-              <input
-                value={form.tipCode}
-                onChange={(e) => setForm({ ...form, tipCode: e.target.value })}
-                placeholder="مثال: MC-ARS-2024"
-                className="w-full bg-black/50 border border-green-900/50 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-green-500/60 font-mono text-lg tracking-widest"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">صورة الكود (اختياري)</label>
-              <input
-                ref={codeImageRef}
-                type="file"
-                accept="image/*"
-                onChange={handleCodeImageChange}
-                className="hidden"
-              />
-              <button
-                type="button"
-                onClick={() => codeImageRef.current?.click()}
-                disabled={codeImageUploading}
-                className="w-full border-2 border-dashed border-green-900/50 hover:border-green-500/50 rounded-xl p-4 text-center transition-all text-gray-500 hover:text-green-400"
-              >
-                {codeImageUploading ? "⏳ جاري الرفع..." : codeImagePreview ? "🔄 تغيير الصورة" : "📸 رفع صورة للكود"}
-              </button>
-              {codeImagePreview && (
-                <div className="mt-3 relative">
-                  <img src={codeImagePreview} alt="preview" className="w-full rounded-xl h-auto" />
-                  <button
-                    type="button"
-                    onClick={() => { setCodeImagePreview(null); setCodeImagePath(null); setCodeImageFile(null); }}
-                    className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-lg"
-                  >
-                    ✕ إزالة
-                  </button>
-                  {codeImagePath && <div className="mt-1 text-xs text-green-400 text-center">✅ تم الرفع بنجاح</div>}
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="flex-1 border border-gray-700 text-gray-400 font-bold py-3 rounded-xl hover:bg-gray-800 transition-all"
-              >
-                إلغاء
-              </button>
-              <button
-                type="submit"
-                disabled={createCode.isPending}
-                className="flex-1 bg-green-500 hover:bg-green-400 disabled:opacity-60 text-black font-black py-3 rounded-xl transition-all shadow-[0_0_15px_rgba(34,197,94,0.3)]"
-              >
-                {createCode.isPending ? "⏳ جاري الإضافة..." : "✅ إضافة الكود"}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      <DayStats
-        stats={todayStats}
-        codes={codes || []}
-        onFinalize={handleFinalize}
-        onNewDay={handleNewDay}
-        finalizing={finalizeDay.isPending}
-        startingNew={startNewDay.isPending}
-      />
-
-      <div>
-        <h2 className="text-xl font-black text-white mb-4">📋 أكواد اليوم النشطة ({codes?.length || 0})</h2>
-
-        {isLoading ? (
-          <div className="space-y-3">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-[#0f1a0f] border border-green-900/30 rounded-xl h-20 animate-pulse" />
-            ))}
+    <div className="min-h-screen bg-[#030903] px-3 sm:px-3 py-3 sm:py-5 md:py-6 text-white" dir="rtl" style={{ fontFamily: "'Cairo', 'Tajawal', sans-serif" }}>
+      <div className="mx-auto max-w-5xl space-y-6 sm:space-y-8">
+        <div className="flex flex-col items-start justify-between gap-3 sm:gap-4 md:flex-row md:items-center">
+          <div>
+            <h1 className="text-[22px] sm:text-[26px] md:text-[30px] font-black text-white">⚙️ لوحة الإدارة</h1>
+            <p className="mt-1.5 sm:mt-2 text-[13px] sm:text-[14px] md:text-[15px] text-emerald-200/70">إضافة وإدارة الأكواد بشكل سريع ومريح</p>
           </div>
-        ) : codes && codes.length > 0 ? (
+
+          {!showAddForm ? (
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="w-full md:w-auto rounded-[16px] sm:rounded-[18px] bg-emerald-500 hover:bg-emerald-400 px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 text-[15px] sm:text-[16px] md:text-[17px] font-black text-black shadow-[0_0_20px_rgba(16,185,129,0.22)]"
+            >
+              + إضافة كود
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowAddForm(false)}
+              className="w-full md:w-auto rounded-[16px] sm:rounded-[18px] bg-emerald-500 hover:bg-emerald-400 px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 text-[15px] sm:text-[16px] md:text-[17px] font-black text-black shadow-[0_0_20px_rgba(16,185,129,0.22)]"
+            >
+              ✕ إغلاق
+            </button>
+          )}
+        </div>
+
+        <SectionCard>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-[18px] sm:text-[20px] md:text-[22px] font-black text-white">💾 مساحة التخزين</h2>
+            <button
+              onClick={refreshStorageStats}
+              className="rounded-xl bg-emerald-500 hover:bg-emerald-400 px-3 py-1.5 text-[14px] sm:text-[15px] font-black text-black"
+            >
+              تحديث
+            </button>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-[16px] border border-emerald-500/15 bg-black/25 px-3 py-3">
+              <div className="text-[12px] sm:text-[13px] text-emerald-100/70">المساحة الكلية</div>
+              <div className="mt-2 text-[20px] sm:text-[23px] md:text-[26px] font-black text-white">{formatBytes(storageStats.totalBytes)}</div>
+            </div>
+
+            <div className="rounded-[16px] border border-emerald-500/15 bg-black/25 px-3 py-3">
+              <div className="text-[12px] sm:text-[13px] text-emerald-100/70">المساحة المستهلكة</div>
+              <div className="mt-2 text-[20px] sm:text-[23px] md:text-[26px] font-black text-emerald-400">{formatBytes(storageStats.usedBytes)}</div>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <div className="mb-2 flex items-center justify-between text-[13px] sm:text-[14px] text-emerald-100/70">
+              <span>نسبة الاستخدام</span>
+              <span>{usedPercent.toFixed(2)}%</span>
+            </div>
+            <div className="h-3 overflow-hidden rounded-full bg-black/35">
+              <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-yellow-400" style={{ width: `${usedPercent}%` }} />
+            </div>
+            <p className="mt-3 text-[12px] sm:text-[13px] md:text-[14px] text-emerald-100/70">
+              أي صور أو أكواد تعدي عليها 30 يوم يتم حذفها تلقائيًا عند فتح صفحة الأدمن.
+            </p>
+          </div>
+        </SectionCard>
+
+        {showAddForm && (
+          <SectionCard>
+            <h2 className="mb-5 sm:mb-6 text-[20px] sm:text-[23px] md:text-[26px] font-black text-white">+ إضافة كود جديد</h2>
+
+            <form onSubmit={handleAddCode} className="space-y-4 sm:space-y-5">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-[13px] sm:text-[14px] md:text-[15px] text-emerald-100/80">نوع التوقع (اختياري)</label>
+                  <input
+                    value={tipOutcome}
+                    onChange={(e) => setTipOutcome(e.target.value)}
+                    placeholder="مثال: 1 أو X2 أو أقل من 7.5"
+                    className="w-full rounded-[16px] sm:rounded-[18px] border border-emerald-500/20 bg-black/35 px-3 py-2.5 text-[14px] sm:text-[15px] md:text-[16px] text-white outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-[13px] sm:text-[14px] md:text-[15px] text-emerald-100/80">نسبة ربح الكود</label>
+                  <input
+                    value={odds}
+                    onChange={(e) => setOdds(e.target.value)}
+                    placeholder="مثال: 1.75"
+                    className="w-full rounded-[16px] sm:rounded-[18px] border border-emerald-500/20 bg-black/35 px-3 py-2.5 text-[14px] sm:text-[15px] md:text-[16px] text-white outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-[13px] sm:text-[14px] md:text-[15px] text-emerald-100/80">وصف الكود (اختياري)</label>
+                <input
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="اكتب وصف الرهان"
+                  className="w-full rounded-[16px] sm:rounded-[18px] border border-emerald-500/20 bg-black/35 px-3 py-2.5 text-[14px] sm:text-[15px] md:text-[16px] text-white outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-[13px] sm:text-[14px] md:text-[15px] text-emerald-100/80">الكود</label>
+                <input
+                  value={tipCode}
+                  onChange={(e) => setTipCode(e.target.value)}
+                  placeholder="مثال: MC-ARS-2024"
+                  className="w-full rounded-[16px] sm:rounded-[18px] border border-emerald-500/20 bg-black/35 px-3 sm:px-3 py-2.5 text-center text-[16px] sm:text-[18px] md:text-[20px] tracking-[0.12em] sm:tracking-[0.14em] text-white outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-[13px] sm:text-[14px] md:text-[15px] text-emerald-100/80">صورة الكود (إجباري)</label>
+                <label className="flex cursor-pointer items-center justify-center rounded-3xl border-2 border-dashed border-emerald-500/25 bg-black/20 px-4 py-5 sm:py-6 text-[14px] sm:text-[15px] md:text-[17px] text-emerald-100/70">
+                  📸 رفع صورة للكود
+                  <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                </label>
+
+                {betImage && <p className="mt-3 text-[12px] sm:text-[13px] md:text-[14px] text-emerald-400 break-all">{betImage.name}</p>}
+
+                {betImagePreview && (
+                  <div className="mt-4 overflow-hidden rounded-[18px] sm:rounded-[18px] sm:rounded-[20px] border border-emerald-500/15 bg-black/25 p-3 sm:p-4">
+                    <p className="mb-3 text-[13px] sm:text-[14px] md:text-[15px] font-bold text-emerald-100/80">معاينة الصورة</p>
+                    <img src={betImagePreview} alt="معاينة صورة الكود" className="mx-auto block max-h-[260px] md:max-h-[380px] w-full rounded-[16px] sm:rounded-[18px] object-contain" />
+                  </div>
+                )}
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <button
+                  type="submit"
+                  disabled={savingCode}
+                  className="rounded-[16px] sm:rounded-[18px] bg-emerald-500 hover:bg-emerald-400 px-4 py-3 text-[16px] sm:text-[18px] md:text-[20px] font-black text-black shadow-[0_0_20px_rgba(16,185,129,0.22)] disabled:opacity-60"
+                >
+                  {savingCode ? 'جاري الإضافة...' : '✅ إضافة الكود'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="rounded-[16px] sm:rounded-[18px] border border-emerald-500/20 bg-black/25 px-4 py-3 text-[16px] sm:text-[18px] md:text-[20px] font-black text-white"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </form>
+          </SectionCard>
+        )}
+
+        <SectionCard>
+          <h2 className="mb-4 sm:mb-5 text-[20px] sm:text-[23px] md:text-[26px] font-black text-white">📊 إحصائيات اليوم</h2>
+
           <div className="space-y-3">
-            {codes.map((code: any) => (
-              <div
-                key={code.id}
-                className="bg-gradient-to-br from-[#0f1a0f] to-[#0a120a] border border-green-900/40 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4"
-              >
-                <div className="flex-1 min-w-0 w-full">
-                  <div className="flex items-center gap-3 flex-wrap mb-2">
-                    {code.tipOutcome && (
-                      <span className="bg-green-500/20 border border-green-500/40 text-green-400 font-black text-sm px-2 py-0.5 rounded">
-                        {code.tipOutcome}
-                      </span>
-                    )}
-                    <span className="font-black text-white font-mono text-lg tracking-widest">{code.tipCode}</span>
-                    <span className="text-yellow-400 font-bold text-sm">x{parseFloat(code.odds).toFixed(2)}</span>
+            <div className="flex items-center justify-between rounded-[16px] border border-emerald-500/15 bg-black/25 px-3 py-3 gap-3">
+              <span className="text-[13px] sm:text-[15px] md:text-[18px] text-emerald-100/80">إجمالي الأكواد</span>
+              <span className="text-[22px] sm:text-[26px] md:text-[30px] font-black text-white">{stats.totalCodes}</span>
+            </div>
+
+            <div className="flex items-center justify-between rounded-[16px] border border-emerald-500/15 bg-black/25 px-3 py-3 gap-3">
+              <span className="text-[13px] sm:text-[15px] md:text-[18px] text-emerald-100/80">الأكواد الرابحة</span>
+              <span className="text-[22px] sm:text-[26px] md:text-[30px] font-black text-emerald-400">{stats.wonCodes}</span>
+            </div>
+
+            <div className="flex items-center justify-between rounded-[16px] border border-yellow-500/15 bg-black/25 px-3 py-3 gap-3">
+              <span className="text-[13px] sm:text-[15px] md:text-[18px] text-yellow-100/80">مجموع ربح الأكواد</span>
+              <span className="text-[20px] sm:text-[24px] md:text-[28px] font-black text-yellow-400">{formatOdds(stats.combinedOdds)}</span>
+            </div>
+
+            <button
+              onClick={handleEndDay}
+              className="mt-3 w-full rounded-[16px] bg-yellow-500 hover:bg-yellow-400 px-5 py-4 text-[15px] sm:text-[16px] md:text-[18px] font-black text-black shadow-[0_0_20px_rgba(234,179,8,0.18)]"
+            >
+              نهاية اليوم - أحسب الإحصائيات
+            </button>
+          </div>
+        </SectionCard>
+
+        <div>
+          <h2 className="mb-4 text-[20px] sm:text-[23px] md:text-[26px] font-black text-white">📋 أكواد اليوم النشطة ({codes.length})</h2>
+
+          {loading ? (
+            <SectionCard>
+              <div className="text-center text-[15px] sm:text-[16px] md:text-[17px] text-gray-400">جاري التحميل...</div>
+            </SectionCard>
+          ) : codes.length === 0 ? (
+            <SectionCard>
+              <div className="text-center text-[15px] sm:text-[16px] md:text-[17px] text-gray-400">لا توجد أكواد اليوم</div>
+            </SectionCard>
+          ) : (
+            <div className="space-y-4">
+              {codes.map((code) => (
+                <SectionCard key={code.id}>
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div className="rounded-[16px] sm:rounded-[18px] border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[14px] sm:text-[15px] md:text-[18px] font-black text-emerald-400">
+                      {code.tip_outcome || 'بدون نوع'}
+                    </div>
+
+                    <div className="text-center w-full md:w-auto order-last md:order-none">
+                      <div className="text-[18px] sm:text-[22px] md:text-[24px] font-black tracking-[0.12em] sm:tracking-[0.14em] md:tracking-[0.16em] break-all text-white">
+                        {code.tip_code}
+                      </div>
+                    </div>
+
+                    <div className="text-[18px] sm:text-[20px] md:text-[22px] font-black text-yellow-400">x{formatOdds(code.odds)}</div>
                   </div>
 
-                  {getImageUrl(code.codeImageUrl) && (
-                    <img
-                      src={getImageUrl(code.codeImageUrl)!}
-                      alt="صورة الكود"
-                      className="w-full h-auto rounded-xl mb-2 cursor-pointer hover:opacity-90 transition-opacity"
-                      style={{ border: "1px solid rgba(34,197,94,0.2)", maxHeight: "200px", objectFit: "contain" }}
-                      onClick={() => window.open(getImageUrl(code.codeImageUrl)!, "_blank")}
-                    />
+                  {code.description && (
+                    <div className="mb-4 rounded-[16px] sm:rounded-[18px] border border-emerald-500/15 bg-black/25 px-3 py-2.5 text-[15px] sm:text-[16px] md:text-xl text-gray-300">
+                      {code.description}
+                    </div>
                   )}
 
-                  <div className="flex items-center gap-2 flex-wrap">
+                  {getPublicUrl(code.code_image_url) && (
+                    <div className="mb-4 overflow-hidden rounded-[16px] border border-emerald-500/15 bg-black/20 p-3">
+                      <img
+                        src={getPublicUrl(code.code_image_url)!}
+                        alt="صورة الرهان"
+                        className="mx-auto block max-h-[240px] md:max-h-[340px] w-full rounded-[16px] sm:rounded-[18px] object-contain"
+                      />
+                    </div>
+                  )}
+
+                  <div className="grid gap-3 md:grid-cols-3">
                     <button
-                      onClick={() => setWinDialog({ id: code.id, desc: code.description })}
-                      className="flex items-center gap-1 bg-green-500/20 hover:bg-green-500/30 border border-green-500/40 text-green-400 font-bold text-xs px-3 py-2 rounded-lg transition-all"
+                      onClick={() => handleWinOrRefund(code, 'won')}
+                      className="rounded-[16px] sm:rounded-[18px] bg-emerald-600 hover:bg-emerald-500 px-3 py-2.5 text-[15px] sm:text-[16px] md:text-[18px] font-black text-white"
                     >
                       ✅ كسب
                     </button>
+
                     <button
-                      onClick={() => setCashOutDialog({ id: code.id, desc: code.tipCode })}
-                      className="flex items-center gap-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-400 font-bold text-xs px-3 py-2 rounded-lg transition-all"
+                      onClick={() => handleWinOrRefund(code, 'refund')}
+                      className="rounded-[16px] sm:rounded-[18px] bg-sky-700 hover:bg-sky-600 px-3 py-2.5 text-[15px] sm:text-[16px] md:text-[18px] font-black text-white"
                     >
-                      📥 استيراد
+                      📥 استرداد
                     </button>
+
                     <button
-                      onClick={() => handleDelete(code.id)}
-                      className="flex items-center gap-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-bold text-xs px-3 py-2 rounded-lg transition-all"
+                      onClick={() => handleDelete(code)}
+                      className="rounded-[16px] sm:rounded-[18px] bg-red-900 hover:bg-red-800 px-3 py-2.5 text-[15px] sm:text-[16px] md:text-[18px] font-black text-white"
                     >
                       🗑️ حذف
                     </button>
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-10 bg-[#0f1a0f]/50 border border-dashed border-green-900/30 rounded-2xl">
-            <p className="text-gray-500">لا توجد أكواد نشطة. أضف أكواداً جديدة!</p>
+                </SectionCard>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <h2 className="mb-4 text-[20px] sm:text-[23px] md:text-[26px] font-black text-white">🏆 أكواد اليوم الرابحة ({wonCodes.length})</h2>
+
+          {loading ? (
+            <SectionCard>
+              <div className="text-center text-[15px] sm:text-[16px] md:text-[17px] text-gray-400">جاري التحميل...</div>
+            </SectionCard>
+          ) : wonCodes.length === 0 ? (
+            <SectionCard>
+              <div className="text-center text-[15px] sm:text-[16px] md:text-[17px] text-gray-400">لا توجد أكواد رابحة اليوم</div>
+            </SectionCard>
+          ) : (
+            <div className="space-y-4">
+              {wonCodes.map((code) => (
+                <SectionCard key={code.id}>
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div className="rounded-[16px] sm:rounded-[18px] border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[14px] sm:text-[15px] md:text-[18px] font-black text-emerald-400">
+                      {code.tip_outcome || 'بدون نوع'}
+                    </div>
+
+                    <div className="text-center w-full md:w-auto order-last md:order-none">
+                      <div className="text-[18px] sm:text-[22px] md:text-[24px] font-black tracking-[0.12em] sm:tracking-[0.14em] md:tracking-[0.16em] break-all text-white">
+                        {code.tip_code}
+                      </div>
+                    </div>
+
+                    <div className="rounded-[16px] sm:rounded-[18px] bg-emerald-500 px-3 py-1.5 text-[14px] sm:text-[15px] md:text-[17px] font-black text-black">
+                      {code.status === 'refund' ? '📥 استرداد' : '✅ كسب'}
+                    </div>
+                  </div>
+
+                  <div className="mb-4 flex items-center justify-between gap-3 rounded-[16px] sm:rounded-[18px] border border-yellow-500/15 bg-black/25 px-3 py-2.5">
+                    <span className="text-[14px] sm:text-[15px] md:text-lg text-yellow-100/80">نسبة الربح الحالية</span>
+                    <span className="text-[18px] sm:text-[20px] md:text-[22px] font-black text-yellow-400">x{formatOdds(code.odds)}</span>
+                  </div>
+
+                  {code.description && (
+                    <div className="mb-4 rounded-[16px] sm:rounded-[18px] border border-emerald-500/15 bg-black/25 px-3 py-2.5 text-[15px] sm:text-[16px] md:text-xl text-gray-300">
+                      {code.description}
+                    </div>
+                  )}
+
+                  {getPublicUrl(code.code_image_url) && (
+                    <div className="mb-4 overflow-hidden rounded-[16px] border border-emerald-500/15 bg-black/20 p-3">
+                      <p className="mb-2 text-[14px] sm:text-[15px] md:text-lg font-bold text-emerald-100/80">📸 صورة الرهان</p>
+                      <img
+                        src={getPublicUrl(code.code_image_url)!}
+                        alt="صورة الرهان"
+                        className="mx-auto block max-h-[240px] md:max-h-[340px] w-full rounded-[16px] sm:rounded-[18px] object-contain"
+                      />
+                    </div>
+                  )}
+
+                  {getPublicUrl(code.proof_image_url) && (
+                    <div className="mb-4 overflow-hidden rounded-[16px] border border-emerald-500/15 bg-black/20 p-3">
+                      <p className="mb-2 text-[14px] sm:text-[15px] md:text-lg font-bold text-emerald-100/80">📸 صورة إثبات الربح</p>
+                      <img
+                        src={getPublicUrl(code.proof_image_url)!}
+                        alt={code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
+                        className="mx-auto block max-h-[240px] md:max-h-[340px] w-full rounded-[16px] sm:rounded-[18px] object-contain"
+                      />
+                    </div>
+                  )}
+
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <button
+                      onClick={() => handleEditWonOdds(code)}
+                      className="rounded-[16px] sm:rounded-[18px] bg-yellow-500 hover:bg-yellow-400 px-3 py-2.5 text-[14px] sm:text-[15px] md:text-[17px] font-black text-black"
+                    >
+                      ✏️ تعديل النسبة
+                    </button>
+
+                    <button
+                      onClick={() => handleChangeWonProofImage(code)}
+                      className="rounded-[16px] sm:rounded-[18px] bg-violet-600 hover:bg-violet-500 px-3 py-2.5 text-[14px] sm:text-[15px] md:text-[17px] font-black text-white"
+                    >
+                      🖼️ تغيير الصورة
+                    </button>
+
+                    <button
+                      onClick={() => handleToggleWonStatus(code)}
+                      className="rounded-[16px] sm:rounded-[18px] bg-sky-700 hover:bg-sky-600 px-3 py-2.5 text-[14px] sm:text-[15px] md:text-[17px] font-black text-white"
+                    >
+                      {code.status === 'won' ? '📥 تحويل لاسترداد' : '✅ تحويل لكسب'}
+                    </button>
+
+                    <button
+                      onClick={() => handleDelete(code)}
+                      className="rounded-[16px] sm:rounded-[18px] bg-red-900 hover:bg-red-800 px-3 py-2.5 text-[14px] sm:text-[15px] md:text-[17px] font-black text-white"
+                    >
+                      🗑️ حذف نهائي
+                    </button>
+                  </div>
+                </SectionCard>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-center">
+          <button
+            onClick={handleLogout}
+            className="w-full sm:w-auto rounded-[16px] sm:rounded-[18px] border border-red-500/30 bg-red-500/10 px-6 py-3 text-[15px] sm:text-[16px] md:text-[17px] font-black text-red-400"
+          >
+            تسجيل خروج
+          </button>
+        </div>
+
+        {message && (
+          <div className="rounded-[16px] sm:rounded-[18px] border border-emerald-500/15 bg-emerald-500/10 px-3 py-3 text-center text-[13px] sm:text-[14px] md:text-[15px] font-black text-emerald-300 break-words">
+            {message}
           </div>
         )}
       </div>
     </div>
-    </AdminGate>
   );
 }
