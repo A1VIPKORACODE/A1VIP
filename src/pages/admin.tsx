@@ -125,7 +125,7 @@ async function getStorageStats(): Promise<StorageStats> {
 
 function SectionCard({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-[22px] sm:rounded-[26px] md:rounded-[30px] border border-emerald-500/20 bg-[linear-gradient(180deg,rgba(16,40,24,0.96),rgba(7,18,10,0.98))] p-3.5 sm:p-4 md:p-5 shadow-[0_0_30px_rgba(16,185,129,0.08)]">
+    <div className="rounded-[18px] sm:rounded-[22px] md:rounded-[24px] border border-emerald-500/20 bg-[linear-gradient(180deg,rgba(16,40,24,0.96),rgba(7,18,10,0.98))] p-3 sm:p-3.5 md:p-4 shadow-[0_0_30px_rgba(16,185,129,0.08)]">
       {children}
     </div>
   );
@@ -153,6 +153,7 @@ export default function AdminPage() {
   const [savingCode, setSavingCode] = useState(false);
 
   useEffect(() => {
+    ensureArabicFont();
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved && Number(saved) > Date.now()) {
       setAuthorized(true);
@@ -658,7 +659,7 @@ export default function AdminPage() {
           onSubmit={handleLogin}
           className="w-full max-w-md rounded-[24px] sm:rounded-[28px] md:rounded-[32px] border border-emerald-500/20 bg-[linear-gradient(180deg,rgba(16,40,24,0.96),rgba(7,18,10,0.98))] p-4 sm:p-5 md:p-6 shadow-[0_0_40px_rgba(16,185,129,0.08)]"
         >
-          <h1 className="mb-5 sm:mb-6 text-center text-[24px] sm:text-[28px] md:text-3xl font-black text-white">دخول لوحة الإدارة</h1>
+          <h1 className="mb-5 sm:mb-6 text-center text-[19px] sm:text-[22px] md:text-[24px] font-black text-white">دخول لوحة الإدارة</h1>
 
           <input
             type="password"
@@ -679,25 +680,25 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#030903] px-3 sm:px-4 py-5 sm:py-6 md:py-8 text-white" dir="rtl">
-      <div className="mx-auto max-w-5xl space-y-6 sm:space-y-8">
+    <div className="min-h-screen bg-[#030903] px-3 sm:px-4 py-4 sm:py-5 md:py-6 text-white" style={{ fontFamily: "'Cairo', 'Tajawal', sans-serif" }} dir="rtl">
+      <div className="mx-auto max-w-5xl space-y-5 sm:space-y-6">
         <div className="flex flex-col items-start justify-between gap-3 sm:gap-4 md:flex-row md:items-center">
           <div>
-            <h1 className="text-[26px] sm:text-[32px] md:text-4xl font-black text-white">⚙️ لوحة الإدارة</h1>
+            <h1 className="text-[22px] sm:text-[26px] md:text-[30px] font-black text-white">⚙️ لوحة الإدارة</h1>
             <p className="mt-1.5 sm:mt-2 text-[14px] sm:text-[16px] md:text-lg text-emerald-200/70">إضافة وإدارة الأكواد بشكل سريع ومريح</p>
           </div>
 
           {!showAddForm ? (
             <button
               onClick={() => setShowAddForm(true)}
-              className="w-full md:w-auto rounded-2xl bg-emerald-500 hover:bg-emerald-400 px-5 sm:px-6 md:px-8 py-3 sm:py-3.5 text-[17px] sm:text-[18px] md:text-xl font-black text-black shadow-[0_0_20px_rgba(16,185,129,0.22)]"
+              className="w-full md:w-auto rounded-2xl bg-emerald-500 hover:bg-emerald-400 px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 text-[17px] sm:text-[18px] md:text-xl font-black text-black shadow-[0_0_20px_rgba(16,185,129,0.22)]"
             >
               + إضافة كود
             </button>
           ) : (
             <button
               onClick={() => setShowAddForm(false)}
-              className="w-full md:w-auto rounded-2xl bg-emerald-500 hover:bg-emerald-400 px-5 sm:px-6 md:px-8 py-3 sm:py-3.5 text-[17px] sm:text-[18px] md:text-xl font-black text-black shadow-[0_0_20px_rgba(16,185,129,0.22)]"
+              className="w-full md:w-auto rounded-2xl bg-emerald-500 hover:bg-emerald-400 px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 text-[17px] sm:text-[18px] md:text-xl font-black text-black shadow-[0_0_20px_rgba(16,185,129,0.22)]"
             >
               ✕ إغلاق
             </button>
@@ -706,7 +707,7 @@ export default function AdminPage() {
 
         <SectionCard>
           <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-[22px] sm:text-[26px] md:text-3xl font-black text-white">💾 مساحة التخزين</h2>
+            <h2 className="text-[18px] sm:text-[20px] md:text-[22px] font-black text-white">💾 مساحة التخزين</h2>
             <button
               onClick={refreshStorageStats}
               className="rounded-xl bg-emerald-500 hover:bg-emerald-400 px-4 py-2 text-[14px] sm:text-[15px] font-black text-black"
@@ -716,14 +717,14 @@ export default function AdminPage() {
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
-            <div className="rounded-[20px] border border-emerald-500/15 bg-black/25 px-4 py-4">
+            <div className="rounded-[16px] border border-emerald-500/15 bg-black/25 px-4 py-4">
               <div className="text-[14px] sm:text-[16px] text-emerald-100/70">المساحة الكلية</div>
-              <div className="mt-2 text-[24px] sm:text-[28px] md:text-3xl font-black text-white">{formatBytes(storageStats.totalBytes)}</div>
+              <div className="mt-2 text-[19px] sm:text-[22px] md:text-[24px] font-black text-white">{formatBytes(storageStats.totalBytes)}</div>
             </div>
 
-            <div className="rounded-[20px] border border-emerald-500/15 bg-black/25 px-4 py-4">
+            <div className="rounded-[16px] border border-emerald-500/15 bg-black/25 px-4 py-4">
               <div className="text-[14px] sm:text-[16px] text-emerald-100/70">المساحة المستهلكة</div>
-              <div className="mt-2 text-[24px] sm:text-[28px] md:text-3xl font-black text-emerald-400">{formatBytes(storageStats.usedBytes)}</div>
+              <div className="mt-2 text-[19px] sm:text-[22px] md:text-[24px] font-black text-emerald-400">{formatBytes(storageStats.usedBytes)}</div>
             </div>
           </div>
 
@@ -743,7 +744,7 @@ export default function AdminPage() {
 
         {showAddForm && (
           <SectionCard>
-            <h2 className="mb-5 sm:mb-6 text-[24px] sm:text-[28px] md:text-3xl font-black text-white">+ إضافة كود جديد</h2>
+            <h2 className="mb-5 sm:mb-6 text-[19px] sm:text-[22px] md:text-[24px] font-black text-white">+ إضافة كود جديد</h2>
 
             <form onSubmit={handleAddCode} className="space-y-4 sm:space-y-5">
               <div className="grid gap-4 md:grid-cols-2">
@@ -784,13 +785,13 @@ export default function AdminPage() {
                   value={tipCode}
                   onChange={(e) => setTipCode(e.target.value)}
                   placeholder="مثال: MC-ARS-2024"
-                  className="w-full rounded-2xl border border-emerald-500/20 bg-black/35 px-3 sm:px-4 py-3 text-center text-[20px] sm:text-[24px] md:text-2xl tracking-[0.12em] sm:tracking-[0.14em] text-white outline-none"
+                  className="w-full rounded-2xl border border-emerald-500/20 bg-black/35 px-3 sm:px-4 py-3 text-center text-[16px] sm:text-[18px] md:text-[20px] tracking-[0.12em] sm:tracking-[0.14em] text-white outline-none"
                 />
               </div>
 
               <div>
                 <label className="mb-2 block text-[14px] sm:text-[16px] md:text-lg text-emerald-100/80">صورة الكود (إجباري)</label>
-                <label className="flex cursor-pointer items-center justify-center rounded-3xl border-2 border-dashed border-emerald-500/25 bg-black/20 px-4 py-7 sm:py-8 text-[16px] sm:text-[18px] md:text-xl text-emerald-100/70">
+                <label className="flex cursor-pointer items-center justify-center rounded-3xl border-2 border-dashed border-emerald-500/25 bg-black/20 px-4 py-7 sm:py-8 text-[13px] sm:text-[14px] md:text-[16px] text-emerald-100/70">
                   📸 رفع صورة للكود
                   <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                 </label>
@@ -800,7 +801,7 @@ export default function AdminPage() {
                 {betImagePreview && (
                   <div className="mt-4 overflow-hidden rounded-[22px] sm:rounded-[24px] border border-emerald-500/15 bg-black/25 p-3 sm:p-4">
                     <p className="mb-3 text-[14px] sm:text-[16px] md:text-lg font-bold text-emerald-100/80">معاينة الصورة</p>
-                    <img src={betImagePreview} alt="معاينة صورة الكود" className="mx-auto block max-h-[380px] md:max-h-[500px] w-full rounded-2xl object-contain" />
+                    <img src={betImagePreview} alt="معاينة صورة الكود" className="mx-auto block max-h-[240px] md:max-h-[360px] w-full rounded-2xl object-contain" />
                   </div>
                 )}
               </div>
@@ -809,7 +810,7 @@ export default function AdminPage() {
                 <button
                   type="submit"
                   disabled={savingCode}
-                  className="rounded-2xl bg-emerald-500 hover:bg-emerald-400 px-5 py-3.5 text-[20px] sm:text-[22px] md:text-2xl font-black text-black shadow-[0_0_20px_rgba(16,185,129,0.22)] disabled:opacity-60"
+                  className="rounded-2xl bg-emerald-500 hover:bg-emerald-400 px-5 py-3.5 text-[16px] sm:text-[18px] md:text-[20px] font-black text-black shadow-[0_0_20px_rgba(16,185,129,0.22)] disabled:opacity-60"
                 >
                   {savingCode ? 'جاري الإضافة...' : '✅ إضافة الكود'}
                 </button>
@@ -817,7 +818,7 @@ export default function AdminPage() {
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="rounded-2xl border border-emerald-500/20 bg-black/25 px-5 py-3.5 text-[20px] sm:text-[22px] md:text-2xl font-black text-white"
+                  className="rounded-2xl border border-emerald-500/20 bg-black/25 px-5 py-3.5 text-[16px] sm:text-[18px] md:text-[20px] font-black text-white"
                 >
                   إلغاء
                 </button>
@@ -827,27 +828,27 @@ export default function AdminPage() {
         )}
 
         <SectionCard>
-          <h2 className="mb-4 sm:mb-5 text-[24px] sm:text-[28px] md:text-3xl font-black text-white">📊 إحصائيات اليوم</h2>
+          <h2 className="mb-4 sm:mb-5 text-[19px] sm:text-[22px] md:text-[24px] font-black text-white">📊 إحصائيات اليوم</h2>
 
           <div className="space-y-3">
-            <div className="flex items-center justify-between rounded-[20px] border border-emerald-500/15 bg-black/25 px-4 py-4 gap-3">
+            <div className="flex items-center justify-between rounded-[16px] border border-emerald-500/15 bg-black/25 px-4 py-4 gap-3">
               <span className="text-[15px] sm:text-[18px] md:text-2xl text-emerald-100/80">إجمالي الأكواد</span>
-              <span className="text-[28px] sm:text-[34px] md:text-4xl font-black text-white">{stats.totalCodes}</span>
+              <span className="text-[22px] sm:text-[26px] md:text-[30px] font-black text-white">{stats.totalCodes}</span>
             </div>
 
-            <div className="flex items-center justify-between rounded-[20px] border border-emerald-500/15 bg-black/25 px-4 py-4 gap-3">
+            <div className="flex items-center justify-between rounded-[16px] border border-emerald-500/15 bg-black/25 px-4 py-4 gap-3">
               <span className="text-[15px] sm:text-[18px] md:text-2xl text-emerald-100/80">الأكواد الرابحة</span>
-              <span className="text-[28px] sm:text-[34px] md:text-4xl font-black text-emerald-400">{stats.wonCodes}</span>
+              <span className="text-[22px] sm:text-[26px] md:text-[30px] font-black text-emerald-400">{stats.wonCodes}</span>
             </div>
 
-            <div className="flex items-center justify-between rounded-[20px] border border-yellow-500/15 bg-black/25 px-4 py-4 gap-3">
+            <div className="flex items-center justify-between rounded-[16px] border border-yellow-500/15 bg-black/25 px-4 py-4 gap-3">
               <span className="text-[15px] sm:text-[18px] md:text-2xl text-yellow-100/80">مجموع ربح الأكواد</span>
               <span className="text-[24px] sm:text-[30px] md:text-4xl font-black text-yellow-400">{formatOdds(stats.combinedOdds)}</span>
             </div>
 
             <button
               onClick={handleEndDay}
-              className="mt-3 w-full rounded-[20px] bg-yellow-500 hover:bg-yellow-400 px-5 py-4 text-[18px] sm:text-[20px] md:text-2xl font-black text-black shadow-[0_0_20px_rgba(234,179,8,0.18)]"
+              className="mt-3 w-full rounded-[16px] bg-yellow-500 hover:bg-yellow-400 px-5 py-4 text-[15px] sm:text-[16px] md:text-[18px] font-black text-black shadow-[0_0_20px_rgba(234,179,8,0.18)]"
             >
               نهاية اليوم - أحسب الإحصائيات
             </button>
@@ -855,15 +856,15 @@ export default function AdminPage() {
         </SectionCard>
 
         <div>
-          <h2 className="mb-4 text-[24px] sm:text-[28px] md:text-3xl font-black text-white">📋 أكواد اليوم النشطة ({codes.length})</h2>
+          <h2 className="mb-4 text-[19px] sm:text-[22px] md:text-[24px] font-black text-white">📋 أكواد اليوم النشطة ({codes.length})</h2>
 
           {loading ? (
             <SectionCard>
-              <div className="text-center text-[17px] sm:text-[19px] md:text-xl text-gray-400">جاري التحميل...</div>
+              <div className="text-center text-[14px] sm:text-[15px] md:text-[16px] text-gray-400">جاري التحميل...</div>
             </SectionCard>
           ) : codes.length === 0 ? (
             <SectionCard>
-              <div className="text-center text-[17px] sm:text-[19px] md:text-xl text-gray-400">لا توجد أكواد اليوم</div>
+              <div className="text-center text-[14px] sm:text-[15px] md:text-[16px] text-gray-400">لا توجد أكواد اليوم</div>
             </SectionCard>
           ) : (
             <div className="space-y-4">
@@ -875,12 +876,12 @@ export default function AdminPage() {
                     </div>
 
                     <div className="text-center w-full md:w-auto order-last md:order-none">
-                      <div className="text-[22px] sm:text-[28px] md:text-4xl font-black tracking-[0.12em] sm:tracking-[0.14em] md:tracking-[0.16em] break-all text-white">
+                      <div className="text-[18px] sm:text-[22px] md:text-[26px] font-black tracking-[0.12em] sm:tracking-[0.14em] md:tracking-[0.16em] break-all text-white">
                         {code.tip_code}
                       </div>
                     </div>
 
-                    <div className="text-[22px] sm:text-[26px] md:text-3xl font-black text-yellow-400">x{formatOdds(code.odds)}</div>
+                    <div className="text-[18px] sm:text-[20px] md:text-[22px] font-black text-yellow-400">x{formatOdds(code.odds)}</div>
                   </div>
 
                   {code.description && (
@@ -890,11 +891,11 @@ export default function AdminPage() {
                   )}
 
                   {getPublicUrl(code.code_image_url) && (
-                    <div className="mb-4 overflow-hidden rounded-[20px] border border-emerald-500/15 bg-black/20 p-3">
+                    <div className="mb-4 overflow-hidden rounded-[16px] border border-emerald-500/15 bg-black/20 p-3">
                       <img
                         src={getPublicUrl(code.code_image_url)!}
                         alt="صورة الرهان"
-                        className="mx-auto block max-h-[380px] md:max-h-[520px] w-full rounded-2xl object-contain"
+                        className="mx-auto block max-h-[260px] md:max-h-[420px] w-full rounded-2xl object-contain"
                       />
                     </div>
                   )}
@@ -902,21 +903,21 @@ export default function AdminPage() {
                   <div className="grid gap-3 md:grid-cols-3">
                     <button
                       onClick={() => handleWinOrRefund(code, 'won')}
-                      className="rounded-2xl bg-emerald-600 hover:bg-emerald-500 px-4 py-3 text-[18px] sm:text-[20px] md:text-2xl font-black text-white"
+                      className="rounded-2xl bg-emerald-600 hover:bg-emerald-500 px-4 py-3 text-[15px] sm:text-[16px] md:text-[18px] font-black text-white"
                     >
                       ✅ كسب
                     </button>
 
                     <button
                       onClick={() => handleWinOrRefund(code, 'refund')}
-                      className="rounded-2xl bg-sky-700 hover:bg-sky-600 px-4 py-3 text-[18px] sm:text-[20px] md:text-2xl font-black text-white"
+                      className="rounded-2xl bg-sky-700 hover:bg-sky-600 px-4 py-3 text-[15px] sm:text-[16px] md:text-[18px] font-black text-white"
                     >
                       📥 استرداد
                     </button>
 
                     <button
                       onClick={() => handleDelete(code)}
-                      className="rounded-2xl bg-red-900 hover:bg-red-800 px-4 py-3 text-[18px] sm:text-[20px] md:text-2xl font-black text-white"
+                      className="rounded-2xl bg-red-900 hover:bg-red-800 px-4 py-3 text-[15px] sm:text-[16px] md:text-[18px] font-black text-white"
                     >
                       🗑️ حذف
                     </button>
@@ -928,15 +929,15 @@ export default function AdminPage() {
         </div>
 
         <div>
-          <h2 className="mb-4 text-[24px] sm:text-[28px] md:text-3xl font-black text-white">🏆 أكواد اليوم الرابحة ({wonCodes.length})</h2>
+          <h2 className="mb-4 text-[19px] sm:text-[22px] md:text-[24px] font-black text-white">🏆 أكواد اليوم الرابحة ({wonCodes.length})</h2>
 
           {loading ? (
             <SectionCard>
-              <div className="text-center text-[17px] sm:text-[19px] md:text-xl text-gray-400">جاري التحميل...</div>
+              <div className="text-center text-[14px] sm:text-[15px] md:text-[16px] text-gray-400">جاري التحميل...</div>
             </SectionCard>
           ) : wonCodes.length === 0 ? (
             <SectionCard>
-              <div className="text-center text-[17px] sm:text-[19px] md:text-xl text-gray-400">لا توجد أكواد رابحة اليوم</div>
+              <div className="text-center text-[14px] sm:text-[15px] md:text-[16px] text-gray-400">لا توجد أكواد رابحة اليوم</div>
             </SectionCard>
           ) : (
             <div className="space-y-4">
@@ -948,12 +949,12 @@ export default function AdminPage() {
                     </div>
 
                     <div className="text-center w-full md:w-auto order-last md:order-none">
-                      <div className="text-[22px] sm:text-[28px] md:text-4xl font-black tracking-[0.12em] sm:tracking-[0.14em] md:tracking-[0.16em] break-all text-white">
+                      <div className="text-[18px] sm:text-[22px] md:text-[26px] font-black tracking-[0.12em] sm:tracking-[0.14em] md:tracking-[0.16em] break-all text-white">
                         {code.tip_code}
                       </div>
                     </div>
 
-                    <div className="rounded-2xl bg-emerald-500 px-4 py-2 text-[16px] sm:text-[18px] md:text-xl font-black text-black">
+                    <div className="rounded-2xl bg-emerald-500 px-4 py-2 text-[13px] sm:text-[14px] md:text-[16px] font-black text-black">
                       {code.status === 'refund' ? '📥 استرداد' : '✅ كسب'}
                     </div>
                   </div>
@@ -970,23 +971,23 @@ export default function AdminPage() {
                   )}
 
                   {getPublicUrl(code.code_image_url) && (
-                    <div className="mb-4 overflow-hidden rounded-[20px] border border-emerald-500/15 bg-black/20 p-3">
+                    <div className="mb-4 overflow-hidden rounded-[16px] border border-emerald-500/15 bg-black/20 p-3">
                       <p className="mb-2 text-[14px] sm:text-[15px] md:text-lg font-bold text-emerald-100/80">📸 صورة الرهان</p>
                       <img
                         src={getPublicUrl(code.code_image_url)!}
                         alt="صورة الرهان"
-                        className="mx-auto block max-h-[380px] md:max-h-[520px] w-full rounded-2xl object-contain"
+                        className="mx-auto block max-h-[260px] md:max-h-[420px] w-full rounded-2xl object-contain"
                       />
                     </div>
                   )}
 
                   {getPublicUrl(code.proof_image_url) && (
-                    <div className="mb-4 overflow-hidden rounded-[20px] border border-emerald-500/15 bg-black/20 p-3">
+                    <div className="mb-4 overflow-hidden rounded-[16px] border border-emerald-500/15 bg-black/20 p-3">
                       <p className="mb-2 text-[14px] sm:text-[15px] md:text-lg font-bold text-emerald-100/80">📸 صورة إثبات الربح</p>
                       <img
                         src={getPublicUrl(code.proof_image_url)!}
                         alt={code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
-                        className="mx-auto block max-h-[380px] md:max-h-[520px] w-full rounded-2xl object-contain"
+                        className="mx-auto block max-h-[260px] md:max-h-[420px] w-full rounded-2xl object-contain"
                       />
                     </div>
                   )}
@@ -994,28 +995,28 @@ export default function AdminPage() {
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     <button
                       onClick={() => handleEditWonOdds(code)}
-                      className="rounded-2xl bg-yellow-500 hover:bg-yellow-400 px-4 py-3 text-[16px] sm:text-[18px] md:text-xl font-black text-black"
+                      className="rounded-2xl bg-yellow-500 hover:bg-yellow-400 px-4 py-3 text-[13px] sm:text-[14px] md:text-[16px] font-black text-black"
                     >
                       ✏️ تعديل النسبة
                     </button>
 
                     <button
                       onClick={() => handleChangeWonProofImage(code)}
-                      className="rounded-2xl bg-violet-600 hover:bg-violet-500 px-4 py-3 text-[16px] sm:text-[18px] md:text-xl font-black text-white"
+                      className="rounded-2xl bg-violet-600 hover:bg-violet-500 px-4 py-3 text-[13px] sm:text-[14px] md:text-[16px] font-black text-white"
                     >
                       🖼️ تغيير الصورة
                     </button>
 
                     <button
                       onClick={() => handleToggleWonStatus(code)}
-                      className="rounded-2xl bg-sky-700 hover:bg-sky-600 px-4 py-3 text-[16px] sm:text-[18px] md:text-xl font-black text-white"
+                      className="rounded-2xl bg-sky-700 hover:bg-sky-600 px-4 py-3 text-[13px] sm:text-[14px] md:text-[16px] font-black text-white"
                     >
                       {code.status === 'won' ? '📥 تحويل لاسترداد' : '✅ تحويل لكسب'}
                     </button>
 
                     <button
                       onClick={() => handleDelete(code)}
-                      className="rounded-2xl bg-red-900 hover:bg-red-800 px-4 py-3 text-[16px] sm:text-[18px] md:text-xl font-black text-white"
+                      className="rounded-2xl bg-red-900 hover:bg-red-800 px-4 py-3 text-[13px] sm:text-[14px] md:text-[16px] font-black text-white"
                     >
                       🗑️ حذف نهائي
                     </button>
