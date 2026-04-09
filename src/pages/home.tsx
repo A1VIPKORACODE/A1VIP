@@ -31,7 +31,6 @@ function saveHomeCache(payload: { activeDayStr: string; codes: any[]; allWonCode
   } catch {}
 }
 
-
 function normalizeStoragePath(path?: string | null) {
   if (!path) return null;
   let clean = String(path).trim();
@@ -253,9 +252,20 @@ export default function HomePage() {
     };
   }, []);
 
-  const todayWonCodes = useMemo(() => allWonCodes.filter((c: any) => c.dayDate === activeDayStr), [allWonCodes, activeDayStr]);
-  const visibleCodes = useMemo(() => codes.slice(0, visibleCodesCount), [codes, visibleCodesCount]);
-  const visibleWonCodes = useMemo(() => todayWonCodes.slice(0, visibleWonCount), [todayWonCodes, visibleWonCount]);
+  const todayWonCodes = useMemo(
+    () => allWonCodes.filter((c: any) => c.dayDate === activeDayStr),
+    [allWonCodes, activeDayStr]
+  );
+
+  const visibleCodes = useMemo(
+    () => codes.slice(0, visibleCodesCount),
+    [codes, visibleCodesCount]
+  );
+
+  const visibleWonCodes = useMemo(
+    () => todayWonCodes.slice(0, visibleWonCount),
+    [todayWonCodes, visibleWonCount]
+  );
 
   return (
     <div className="space-y-10" dir="rtl">
@@ -318,18 +328,6 @@ export default function HomePage() {
             {[...Array(3)].map((_, i) => (
               <div key={i} className="bg-[#0f1a0f] border border-green-900/30 rounded-2xl h-64 animate-pulse" />
             ))}
-            </div>
-
-            {visibleWonCount < todayWonCodes.length && (
-              <div className="flex justify-center">
-                <button
-                  onClick={() => setVisibleWonCount((prev) => prev + 15)}
-                  className="bg-green-500/20 hover:bg-green-500/30 border border-green-500/40 text-green-400 font-black text-lg px-8 py-3 rounded-2xl transition-all"
-                >
-                  عرض المزيد
-                </button>
-              </div>
-            )}
           </div>
         ) : codes.length > 0 ? (
           <div className="space-y-5">
@@ -379,49 +377,61 @@ export default function HomePage() {
 
           <div className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {visibleWonCodes.map((code: any, idx: number) => (
-              <div
-                key={code.id}
-                className="bg-[#0a120a] border border-green-700/50 rounded-2xl overflow-hidden"
-                style={{ boxShadow: '0 0 20px rgba(34,197,94,0.1)' }}
-              >
-                <div className="h-1 bg-gradient-to-r from-green-600 via-green-400 to-green-600" />
+              {visibleWonCodes.map((code: any, idx: number) => (
+                <div
+                  key={code.id}
+                  className="bg-[#0a120a] border border-green-700/50 rounded-2xl overflow-hidden"
+                  style={{ boxShadow: '0 0 20px rgba(34,197,94,0.1)' }}
+                >
+                  <div className="h-1 bg-gradient-to-r from-green-600 via-green-400 to-green-600" />
 
-                <div className="p-4 pb-0 flex items-center justify-between">
-                  <div className="inline-flex items-center justify-center w-8 h-8 border-2 border-green-500 rounded-lg text-green-400 font-black text-base">
-                    {idx + 1}
-                  </div>
-                  <div className="bg-green-500 text-black text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">
-                    {code.status === 'refund' ? '📥 استرداد' : '✅ رابح'}
-                  </div>
-                </div>
-
-                <div className="px-4 pt-3">
-                  <div className="bg-[#111] border border-green-900/60 rounded-xl px-4 py-3 text-center">
-                    <span className="font-black text-2xl tracking-[0.2em] text-green-400 font-mono">{code.tipCode}</span>
-                  </div>
-                </div>
-
-                <div className="px-4 pt-3 flex items-center justify-between" dir="rtl">
-                  <span className="text-gray-400 text-sm">نسبة ربح الكود</span>
-                  <span className="text-yellow-400 font-black text-lg">x{parseFloat(code.odds).toFixed(2)}</span>
-                </div>
-
-                {code.proofImageUrl && (
-                  <div className="px-4 pt-3 pb-4">
-                    <div className="text-xs text-gray-500 mb-2 font-bold" dir="rtl">
-                      📸 {code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
+                  <div className="p-4 pb-0 flex items-center justify-between">
+                    <div className="inline-flex items-center justify-center w-8 h-8 border-2 border-green-500 rounded-lg text-green-400 font-black text-base">
+                      {idx + 1}
                     </div>
-                    <img
-                      loading="lazy"
-                      src={code.proofImageUrl}
-                      alt={code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
-                      className="w-full h-auto rounded-xl block cursor-pointer hover:opacity-90"
-                    />
+                    <div className="bg-green-500 text-black text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">
+                      {code.status === 'refund' ? '📥 استرداد' : '✅ رابح'}
+                    </div>
                   </div>
-                )}
+
+                  <div className="px-4 pt-3">
+                    <div className="bg-[#111] border border-green-900/60 rounded-xl px-4 py-3 text-center">
+                      <span className="font-black text-2xl tracking-[0.2em] text-green-400 font-mono">{code.tipCode}</span>
+                    </div>
+                  </div>
+
+                  <div className="px-4 pt-3 flex items-center justify-between" dir="rtl">
+                    <span className="text-gray-400 text-sm">نسبة ربح الكود</span>
+                    <span className="text-yellow-400 font-black text-lg">x{parseFloat(code.odds).toFixed(2)}</span>
+                  </div>
+
+                  {code.proofImageUrl && (
+                    <div className="px-4 pt-3 pb-4">
+                      <div className="text-xs text-gray-500 mb-2 font-bold" dir="rtl">
+                        📸 {code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
+                      </div>
+                      <img
+                        loading="lazy"
+                        src={code.proofImageUrl}
+                        alt={code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
+                        className="w-full h-auto rounded-xl block cursor-pointer hover:opacity-90"
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {visibleWonCount < todayWonCodes.length && (
+              <div className="flex justify-center">
+                <button
+                  onClick={() => setVisibleWonCount((prev) => prev + 15)}
+                  className="bg-green-500/20 hover:bg-green-500/30 border border-green-500/40 text-green-400 font-black text-lg px-8 py-3 rounded-2xl transition-all"
+                >
+                  عرض المزيد
+                </button>
               </div>
-            ))}
+            )}
           </div>
         </section>
       )}
@@ -430,11 +440,9 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(234,179,8,0.1),transparent_70%)]" />
         <div className="relative">
           <div className="text-5xl mb-4">🎰</div>
-
           <h3 className="text-2xl md:text-3xl font-black mb-3">
             لم تسجّل في <span className="text-yellow-400">Melbet</span> بعد؟
           </h3>
-
           <p className="text-gray-400 mb-6 text-lg">
             سجّل الآن واحصل على مكافأة مالية كبيرة عند التسجيل!
             <br />
@@ -442,12 +450,11 @@ export default function HomePage() {
             <span className="bg-yellow-500 text-black font-black px-2 py-0.5 rounded text-sm">A1VIP</span> واحصل على مكافأة
             حصرية وابدأ الرهان على توقعاتنا المضمونة بنسبة 100%
           </p>
-
           <a
             href={GIFT_URL}
             target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-black font-black text-xl px-10 py-5 rounded-2xl transition-all shadow-[0_0_40px_rgba(234,179,8,0.5)]"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-black font-black text-xl px-10 py-5 rounded-2xl transition-all shadow-[0_0_40px_rgba(234,179,8,0.5)] hover:shadow-[0_0_60px_rgba(234,179,8,0.7)]"
           >
             🎁 ابدأ الآن واحصل على الهدية
           </a>
