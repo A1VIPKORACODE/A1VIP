@@ -3,10 +3,7 @@ import { supabase } from '../lib/supabase';
 
 const AR_LATN_LOCALE = 'ar-EG-u-nu-latn';
 
-function
-
-const [visibleCount, setVisibleCount] = useState(15);
- normalizeStoragePath(path?: string | null) {
+function normalizeStoragePath(path?: string | null) {
   if (!path) return null;
   let clean = String(path).trim();
   clean = clean.replace(/^https?:\/\/[^/]+\/storage\/v1\/object\/public\/codes\//, '');
@@ -88,7 +85,8 @@ function ProofCard({ code, index }: { code: CodeRow; index: number }) {
       {getImageUrl(code.code_image_url) && (
         <div className="mb-3 overflow-hidden rounded-[16px] sm:rounded-[18px] md:rounded-[22px] border border-green-900/40 bg-black/20 p-2.5 sm:p-3">
           <div className="mb-2 text-[12px] sm:text-sm md:text-base font-black text-gray-300">ðŸ“¸ ØµÙˆØ±Ø© Ø§Ù„Ø±Ù‡Ø§Ù†</div>
-          <img loading="lazy"
+          <img
+            loading="lazy"
             src={getImageUrl(code.code_image_url)!}
             alt="ØµÙˆØ±Ø© Ø§Ù„Ø±Ù‡Ø§Ù†"
             className="mx-auto block w-full rounded-xl sm:rounded-2xl object-contain"
@@ -99,7 +97,8 @@ function ProofCard({ code, index }: { code: CodeRow; index: number }) {
       {getImageUrl(code.proof_image_url) && (
         <div className="overflow-hidden rounded-[16px] sm:rounded-[18px] md:rounded-[22px] border border-green-900/40 bg-black/20 p-2.5 sm:p-3">
           <div className="mb-2 text-[12px] sm:text-sm md:text-base font-black text-gray-300">ðŸ“¸ ØµÙˆØ±Ø© Ø¥Ø«Ø¨Ø§Øª Ø§Ù„Ø±Ø¨Ø­</div>
-          <img loading="lazy"
+          <img
+            loading="lazy"
             src={getImageUrl(code.proof_image_url)!}
             alt={code.status === 'refund' ? 'Ø¥Ø«Ø¨Ø§Øª Ø§Ù„Ø§Ø³ØªØ±Ø¯Ø§Ø¯' : 'Ø¥Ø«Ø¨Ø§Øª Ø§Ù„Ø±Ø¨Ø­'}
             className="mx-auto block w-full rounded-xl sm:rounded-2xl object-contain"
@@ -165,6 +164,10 @@ export default function WonCodesPage() {
   const [currentDay, setCurrentDay] = useState('');
   const [wonCodes, setWonCodes] = useState<CodeRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [visibleCount, setVisibleCount] = useState(15);
+
+  const CACHE_KEY = 'won_codes_cache_v1';
+  const CACHE_TTL = 1000 * 60 * 3;
 
   useEffect(() => {
     let mounted = true;
@@ -172,6 +175,20 @@ export default function WonCodesPage() {
     async function loadData() {
       try {
         setLoading(true);
+
+        const cachedRaw = localStorage.getItem(CACHE_KEY);
+        if (cachedRaw) {
+          try {
+            const cached = JSON.parse(cachedRaw);
+            if (cached?.timestamp && Date.now() - cached.timestamp < CACHE_TTL) {
+              if (mounted) {
+                setCurrentDay(cached.currentDay || '');
+                setWonCodes(Array.isArray(cached.wonCodes) ? cached.wonCodes : []);
+                setLoading(false);
+              }
+            }
+          } catch (_) {}
+        }
 
         const { data: appState } = await supabase.from('app_state').select('value').eq('key', 'current_day').maybeSingle();
         const current = appState?.value || new Date().toISOString().split('T')[0];
@@ -188,8 +205,18 @@ export default function WonCodesPage() {
         if (error) throw error;
         if (!mounted) return;
 
+        const finalCodes = (data || []) as CodeRow[];
         setCurrentDay(current);
-        setWonCodes((data || []) as CodeRow[]);
+        setWonCodes(finalCodes);
+
+        localStorage.setItem(
+          CACHE_KEY,
+          JSON.stringify({
+            timestamp: Date.now(),
+            currentDay: current,
+            wonCodes: finalCodes,
+          })
+        );
       } catch (err) {
         console.error('WON PAGE ERROR:', err);
         if (!mounted) return;
@@ -218,15 +245,16 @@ export default function WonCodesPage() {
   }, [wonCodes, previousWinningDay]);
 
   const last30Codes = wonCodes;
+  const visibleCodes = useMemo(() => last30Codes.slice(0, visibleCount), [last30Codes, visibleCount]);
 
   const groupedCodes = useMemo(() => {
     const grouped: Record<string, CodeRow[]> = {};
-    for (const code of last30Codes) {
+    for (const code of visibleCodes) {
       if (!grouped[code.day_date]) grouped[code.day_date] = [];
       grouped[code.day_date].push(code);
     }
     return grouped;
-  }, [last30Codes]);
+  }, [visibleCodes]);
 
   const yesterdayStats = useMemo(() => {
     const totalCodes = yesterdayCodes.length;
@@ -337,20 +365,33 @@ export default function WonCodesPage() {
             Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¥Ø«Ø¨Ø§ØªØ§Øª Ø­ØªÙ‰ Ø§Ù„Ø¢Ù†
           </div>
         ) : (
-          Object.entries(groupedCodes).map(([day, items]) => (
-            <div key={day} className="space-y-4 sm:space-y-6">
-              <div className="text-center">
-                <h3 className="text-[24px] sm:text-[30px] md:text-5xl font-black text-white">{formatDateArabic(day)}</h3>
-                <p className="mt-1.5 sm:mt-2 text-[16px] sm:text-[20px] md:text-2xl text-gray-400">{items.length} ÙƒÙˆØ¯ Ø±Ø§Ø¨Ø­</p>
-              </div>
+          <>
+            {Object.entries(groupedCodes).map(([day, items]) => (
+              <div key={day} className="space-y-4 sm:space-y-6">
+                <div className="text-center">
+                  <h3 className="text-[24px] sm:text-[30px] md:text-5xl font-black text-white">{formatDateArabic(day)}</h3>
+                  <p className="mt-1.5 sm:mt-2 text-[16px] sm:text-[20px] md:text-2xl text-gray-400">{items.length} ÙƒÙˆØ¯ Ø±Ø§Ø¨Ø­</p>
+                </div>
 
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5">
-                {items.map((code, idx) => (
-                  <ProofCard key={code.id} code={code} index={idx + 1} />
-                ))}
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5">
+                  {items.map((code, idx) => (
+                    <ProofCard key={code.id} code={code} index={idx + 1} />
+                  ))}
+                </div>
               </div>
-            </div>
-          ))
+            ))}
+
+            {visibleCount < last30Codes.length && (
+              <div className="flex justify-center pt-2 sm:pt-4">
+                <button
+                  onClick={() => setVisibleCount((prev) => prev + 15)}
+                  className="rounded-[18px] sm:rounded-[20px] border border-yellow-400/60 bg-yellow-500/10 px-6 sm:px-8 py-3 sm:py-4 text-[18px] sm:text-[22px] md:text-2xl font-black text-yellow-300 shadow-[0_0_22px_rgba(234,179,8,0.18)]"
+                >
+                  Ø¹Ø±Ø¶ Ø§Ù„Ù…Ø²ÙŠØ¯
+                </button>
+              </div>
+            )}
+          </>
         )}
       </section>
     </div>
