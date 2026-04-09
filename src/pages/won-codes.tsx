@@ -82,11 +82,20 @@ function ProofCard({ code, index }: { code: CodeRow; index: number }) {
         <div className="text-[12px] sm:text-sm md:text-base text-gray-300">نسبة ربح الكود</div>
       </div>
 
+      {getImageUrl(code.code_image_url) && (
+        <div className="mb-3 overflow-hidden rounded-[16px] sm:rounded-[18px] md:rounded-[22px] border border-green-900/40 bg-black/20 p-2.5 sm:p-3">
+          <div className="mb-2 text-[12px] sm:text-sm md:text-base font-black text-gray-300">📸 صورة الرهان</div>
+          <img
+            src={getImageUrl(code.code_image_url)!}
+            alt="صورة الرهان"
+            className="mx-auto block w-full rounded-xl sm:rounded-2xl object-contain"
+          />
+        </div>
+      )}
+
       {getImageUrl(code.proof_image_url) && (
         <div className="overflow-hidden rounded-[16px] sm:rounded-[18px] md:rounded-[22px] border border-green-900/40 bg-black/20 p-2.5 sm:p-3">
-          <div className="mb-2 text-[12px] sm:text-sm md:text-base font-black text-gray-300">
-            📸 {code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
-          </div>
+          <div className="mb-2 text-[12px] sm:text-sm md:text-base font-black text-gray-300">📸 صورة إثبات الربح</div>
           <img
             src={getImageUrl(code.proof_image_url)!}
             alt={code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
@@ -116,7 +125,6 @@ function StatsCard({
   return (
     <section className="rounded-[24px] sm:rounded-[28px] md:rounded-[34px] border border-green-900/50 bg-[radial-gradient(circle_at_top,#0d2210,#071107)] px-3 py-5 sm:px-4 sm:py-6 md:p-10 text-center shadow-[0_0_32px_rgba(0,255,120,0.08)]">
       <div className="mb-2 text-[20px] sm:text-[24px] md:text-3xl font-black text-green-400">{title}</div>
-
       {dayLabel && <div className="mb-3 text-[14px] sm:text-[16px] md:text-2xl font-bold text-gray-400">{dayLabel}</div>}
 
       <p className="mx-auto max-w-4xl text-[20px] sm:text-[28px] md:text-5xl font-black leading-[1.7] md:leading-relaxed text-white">
