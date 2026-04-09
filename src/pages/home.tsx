@@ -4,7 +4,10 @@ import { supabase, GIFT_URL, MELBET_TUTORIAL_URL, CODE_USAGE_URL } from '../lib/
 
 const AR_LATN_LOCALE = 'ar-EG-u-nu-latn';
 
-function normalizeStoragePath(path?: string | null) {
+function
+
+const [visibleCount, setVisibleCount] = useState(15);
+ normalizeStoragePath(path?: string | null) {
   if (!path) return null;
   let clean = String(path).trim();
   clean = clean.replace(/^https?:\/\/[^/]+\/storage\/v1\/object\/public\/codes\//, '');
@@ -57,7 +60,7 @@ function CodeCard({ code }: { code: any }) {
     <div className="relative bg-gradient-to-br from-[#0f1a0f] to-[#0a120a] border border-green-900/40 rounded-2xl overflow-hidden hover:border-green-500/60 transition-all hover:shadow-[0_0_30px_rgba(34,197,94,0.15)]">
       <div className="h-1 bg-gradient-to-r from-green-600 via-green-400 to-green-600" />
 
-      {imageUrl && <img src={imageUrl} alt="code" className="w-full h-auto block" />}
+      {imageUrl && <img loading="lazy" src={imageUrl} alt="code" className="w-full h-auto block" />}
 
       <div className="p-5 space-y-4">
         <div className="flex items-center justify-between gap-3">
@@ -338,7 +341,7 @@ export default function HomePage() {
                     <div className="text-xs text-gray-500 mb-2 font-bold" dir="rtl">
                       📸 {code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
                     </div>
-                    <img
+                    <img loading="lazy"
                       src={code.proofImageUrl}
                       alt={code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
                       className="w-full h-auto rounded-xl block cursor-pointer hover:opacity-90"
