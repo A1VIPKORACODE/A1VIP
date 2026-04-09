@@ -64,58 +64,14 @@ function getPublicUrl(path?: string | null) {
 }
 
 function fileName(prefix: string, file: File) {
-  const ext = 'jpg';
+  const ext = file.name.split('.').pop() || 'jpg';
   const rand = Math.random().toString(36).slice(2, 10);
   return `${prefix}/${Date.now()}-${rand}.${ext}`;
 }
 
-async function compressImage(file: File, maxWidth = 1600, quality = 0.72): Promise<File> {
-  if (!file.type.startsWith('image/')) return file;
-
-  const dataUrl = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error('فشل قراءة الصورة'));
-    reader.readAsDataURL(file);
-  });
-
-  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('فشل تحميل الصورة للضغط'));
-    img.src = dataUrl;
-  });
-
-  const ratio = Math.min(1, maxWidth / image.width);
-  const width = Math.max(1, Math.round(image.width * ratio));
-  const height = Math.max(1, Math.round(image.height * ratio));
-
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('فشل تجهيز ضغط الصورة');
-  ctx.drawImage(image, 0, 0, width, height);
-
-  const blob = await new Promise<Blob | null>((resolve) => {
-    canvas.toBlob(resolve, 'image/jpeg', quality);
-  });
-
-  if (!blob) return file;
-
-  const compressed = new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', {
-    type: 'image/jpeg',
-    lastModified: Date.now(),
-  });
-
-  return compressed.size < file.size ? compressed : file;
-}
-
 async function uploadImage(file: File, prefix: string) {
-  const compressedFile = await compressImage(file);
-  const path = fileName(prefix, compressedFile);
-  const { error } = await supabase.storage.from(BUCKET).upload(path, compressedFile, {
+  const path = fileName(prefix, file);
+  const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
     cacheControl: '3600',
     upsert: false,
   });
@@ -402,16 +358,14 @@ export default function AdminPage() {
     setShowAddForm(false);
   };
 
-  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     setBetImage(file);
 
     if (betImagePreview) URL.revokeObjectURL(betImagePreview);
 
     if (file) {
-      const compressed = await compressImage(file);
-      setBetImage(compressed);
-      setBetImagePreview(URL.createObjectURL(compressed));
+      setBetImagePreview(URL.createObjectURL(file));
     } else {
       setBetImagePreview(null);
     }
@@ -782,7 +736,7 @@ export default function AdminPage() {
               <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-yellow-400" style={{ width: `${usedPercent}%` }} />
             </div>
             <p className="mt-3 text-[13px] sm:text-[14px] md:text-base text-emerald-100/70">
-              الصور يتم ضغطها تلقائيًا قبل الرفع، وأي صور أو أكواد تعدي عليها 30 يوم يتم حذفها تلقائيًا عند فتح صفحة الأدمن.
+              أي صور أو أكواد تعدي عليها 30 يوم يتم حذفها تلقائيًا عند فتح صفحة الأدمن.
             </p>
           </div>
         </SectionCard>
@@ -845,7 +799,7 @@ export default function AdminPage() {
 
                 {betImagePreview && (
                   <div className="mt-4 overflow-hidden rounded-[22px] sm:rounded-[24px] border border-emerald-500/15 bg-black/25 p-3 sm:p-4">
-                    <p className="mb-3 text-[14px] sm:text-[16px] md:text-lg font-bold text-emerald-100/80">معاينة الصورة بعد الضغط التلقائي</p>
+                    <p className="mb-3 text-[14px] sm:text-[16px] md:text-lg font-bold text-emerald-100/80">معاينة الصورة</p>
                     <img src={betImagePreview} alt="معاينة صورة الكود" className="mx-auto block max-h-[380px] md:max-h-[500px] w-full rounded-2xl object-contain" />
                   </div>
                 )}
