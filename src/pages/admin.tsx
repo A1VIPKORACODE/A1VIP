@@ -704,43 +704,6 @@ export default function AdminPage() {
           )}
         </div>
 
-        <SectionCard>
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-[18px] sm:text-[20px] md:text-[22px] font-black text-white">💾 مساحة التخزين</h2>
-            <button
-              onClick={refreshStorageStats}
-              className="rounded-xl bg-emerald-500 hover:bg-emerald-400 px-3 py-1.5 text-[14px] sm:text-[15px] font-black text-black"
-            >
-              تحديث
-            </button>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="rounded-[16px] border border-emerald-500/15 bg-black/25 px-3 py-3">
-              <div className="text-[12px] sm:text-[13px] text-emerald-100/70">المساحة الكلية</div>
-              <div className="mt-2 text-[20px] sm:text-[23px] md:text-[26px] font-black text-white">{formatBytes(storageStats.totalBytes)}</div>
-            </div>
-
-            <div className="rounded-[16px] border border-emerald-500/15 bg-black/25 px-3 py-3">
-              <div className="text-[12px] sm:text-[13px] text-emerald-100/70">المساحة المستهلكة</div>
-              <div className="mt-2 text-[20px] sm:text-[23px] md:text-[26px] font-black text-emerald-400">{formatBytes(storageStats.usedBytes)}</div>
-            </div>
-          </div>
-
-          <div className="mt-4">
-            <div className="mb-2 flex items-center justify-between text-[13px] sm:text-[14px] text-emerald-100/70">
-              <span>نسبة الاستخدام</span>
-              <span>{usedPercent.toFixed(2)}%</span>
-            </div>
-            <div className="h-3 overflow-hidden rounded-full bg-black/35">
-              <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-yellow-400" style={{ width: `${usedPercent}%` }} />
-            </div>
-            <p className="mt-3 text-[12px] sm:text-[13px] md:text-[14px] text-emerald-100/70">
-              أي صور أو أكواد تعدي عليها 30 يوم يتم حذفها تلقائيًا عند فتح صفحة الأدمن.
-            </p>
-          </div>
-        </SectionCard>
-
         {showAddForm && (
           <SectionCard>
             <h2 className="mb-5 sm:mb-6 text-[20px] sm:text-[23px] md:text-[26px] font-black text-white">+ إضافة كود جديد</h2>
@@ -1025,6 +988,43 @@ export default function AdminPage() {
             </div>
           )}
         </div>
+
+        <SectionCard>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-[18px] sm:text-[20px] md:text-[22px] font-black text-white">💾 مساحة التخزين</h2>
+            <button
+              onClick={refreshStorageStats}
+              className="rounded-xl bg-emerald-500 hover:bg-emerald-400 px-3 py-1.5 text-[14px] sm:text-[15px] font-black text-black"
+            >
+              تحديث
+            </button>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-[16px] border border-emerald-500/15 bg-black/25 px-3 py-3">
+              <div className="text-[12px] sm:text-[13px] text-emerald-100/70">المساحة الكلية</div>
+              <div className="mt-2 text-[20px] sm:text-[23px] md:text-[26px] font-black text-white">{formatBytes(storageStats.totalBytes)}</div>
+            </div>
+
+            <div className="rounded-[16px] border border-emerald-500/15 bg-black/25 px-3 py-3">
+              <div className="text-[12px] sm:text-[13px] text-emerald-100/70">المساحة المستهلكة</div>
+              <div className="mt-2 text-[20px] sm:text-[23px] md:text-[26px] font-black text-emerald-400">{formatBytes(storageStats.usedBytes)}</div>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <div className="mb-2 flex items-center justify-between text-[13px] sm:text-[14px] text-emerald-100/70">
+              <span>نسبة الاستخدام</span>
+              <span>{usedPercent.toFixed(2)}%</span>
+            </div>
+            <div className="h-3 overflow-hidden rounded-full bg-black/35">
+              <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-yellow-400" style={{ width: `${usedPercent}%` }} />
+            </div>
+            <p className="mt-3 text-[12px] sm:text-[13px] md:text-[14px] text-emerald-100/70">
+              أي صور أو أكواد تعدي عليها 30 يوم يتم حذفها تلقائيًا عند فتح صفحة الأدمن.
+            </p>
+          </div>
+        </SectionCard>
 
         <div className="flex justify-center">
           <button
