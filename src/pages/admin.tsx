@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 const ADMIN_PASSWORD = 'AbanoubSamirRANDAHANY907&ANGLIabanoub907@#$';
 const STORAGE_KEY = 'admin_token_expires';
 const BUCKET = 'codes';
+const TOTAL_STORAGE_BYTES = 1024 * 1024 * 1024;
 
 type CodeStatus = 'active' | 'won' | 'refund';
 
@@ -31,8 +32,20 @@ type DailyStat = {
   is_finalized: boolean;
 };
 
+type StorageStats = {
+  usedBytes: number;
+  totalBytes: number;
+};
+
 function formatOdds(value: number) {
   return Number(value || 0).toFixed(2);
+}
+
+function formatBytes(bytes: number) {
+  const gb = bytes / (1024 * 1024 * 1024);
+  const mb = bytes / (1024 * 1024);
+  if (gb >= 1) return `${gb.toFixed(2)} GB`;
+  return `${mb.toFixed(2)} MB`;
 }
 
 function addOneDay(dateStr: string) {
@@ -51,14 +64,58 @@ function getPublicUrl(path?: string | null) {
 }
 
 function fileName(prefix: string, file: File) {
-  const ext = file.name.split('.').pop() || 'jpg';
+  const ext = 'jpg';
   const rand = Math.random().toString(36).slice(2, 10);
   return `${prefix}/${Date.now()}-${rand}.${ext}`;
 }
 
+async function compressImage(file: File, maxWidth = 1600, quality = 0.72): Promise<File> {
+  if (!file.type.startsWith('image/')) return file;
+
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error('فشل قراءة الصورة'));
+    reader.readAsDataURL(file);
+  });
+
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('فشل تحميل الصورة للضغط'));
+    img.src = dataUrl;
+  });
+
+  const ratio = Math.min(1, maxWidth / image.width);
+  const width = Math.max(1, Math.round(image.width * ratio));
+  const height = Math.max(1, Math.round(image.height * ratio));
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('فشل تجهيز ضغط الصورة');
+  ctx.drawImage(image, 0, 0, width, height);
+
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, 'image/jpeg', quality);
+  });
+
+  if (!blob) return file;
+
+  const compressed = new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', {
+    type: 'image/jpeg',
+    lastModified: Date.now(),
+  });
+
+  return compressed.size < file.size ? compressed : file;
+}
+
 async function uploadImage(file: File, prefix: string) {
-  const path = fileName(prefix, file);
-  const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+  const compressedFile = await compressImage(file);
+  const path = fileName(prefix, compressedFile);
+  const { error } = await supabase.storage.from(BUCKET).upload(path, compressedFile, {
     cacheControl: '3600',
     upsert: false,
   });
@@ -76,6 +133,40 @@ async function removeImage(path?: string | null) {
   await supabase.storage.from(BUCKET).remove([clean]);
 }
 
+async function listAllFiles(prefix = ''): Promise<any[]> {
+  const { data, error } = await supabase.storage.from(BUCKET).list(prefix, {
+    limit: 1000,
+    sortBy: { column: 'name', order: 'asc' },
+  });
+  if (error) throw error;
+
+  const files: any[] = [];
+  for (const item of data || []) {
+    if (!item) continue;
+    if (item.id) {
+      files.push({ ...item, fullPath: prefix ? `${prefix}/${item.name}` : item.name });
+    } else {
+      const childPrefix = prefix ? `${prefix}/${item.name}` : item.name;
+      const childFiles = await listAllFiles(childPrefix);
+      files.push(...childFiles);
+    }
+  }
+  return files;
+}
+
+async function getStorageStats(): Promise<StorageStats> {
+  const files = await listAllFiles('');
+  const usedBytes = files.reduce((sum, file) => {
+    const size = Number(file.metadata?.size || file?.metadata?.size || file?.size || 0);
+    return sum + size;
+  }, 0);
+
+  return {
+    usedBytes,
+    totalBytes: TOTAL_STORAGE_BYTES,
+  };
+}
+
 function SectionCard({ children }: { children: React.ReactNode }) {
   return (
     <div className="rounded-[22px] sm:rounded-[26px] md:rounded-[30px] border border-emerald-500/20 bg-[linear-gradient(180deg,rgba(16,40,24,0.96),rgba(7,18,10,0.98))] p-3.5 sm:p-4 md:p-5 shadow-[0_0_30px_rgba(16,185,129,0.08)]">
@@ -89,6 +180,7 @@ export default function AdminPage() {
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [storageStats, setStorageStats] = useState<StorageStats>({ usedBytes: 0, totalBytes: TOTAL_STORAGE_BYTES });
 
   const [codes, setCodes] = useState<CodeItem[]>([]);
   const [wonCodes, setWonCodes] = useState<CodeItem[]>([]);
@@ -213,12 +305,41 @@ export default function AdminPage() {
     }
   }
 
+  async function cleanupStorageOlderThan30Days() {
+    const files = await listAllFiles('');
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+
+    const toDelete = files
+      .filter((file) => {
+        const createdAt = file.created_at || file.updated_at;
+        if (!createdAt) return false;
+        return new Date(createdAt) < cutoff;
+      })
+      .map((file) => file.fullPath)
+      .filter(Boolean);
+
+    if (toDelete.length > 0) {
+      await supabase.storage.from(BUCKET).remove(toDelete);
+    }
+  }
+
+  async function refreshStorageStats() {
+    try {
+      const stats = await getStorageStats();
+      setStorageStats(stats);
+    } catch (err) {
+      console.error('STORAGE STATS ERROR:', err);
+    }
+  }
+
   async function loadAll() {
     try {
       setLoading(true);
       setMessage('');
 
       await cleanupOldWonCodes();
+      await cleanupStorageOlderThan30Days();
 
       const day = await ensureCurrentDay();
       setCurrentDay(day);
@@ -243,6 +364,7 @@ export default function AdminPage() {
       setCodes((activeData || []) as CodeItem[]);
       setWonCodes((wonData || []) as CodeItem[]);
       setDailyStats((statsData as DailyStat) || null);
+      await refreshStorageStats();
     } catch (err: any) {
       setMessage(`حصل خطأ أثناء تحميل البيانات: ${err?.message || 'unknown error'}`);
     } finally {
@@ -280,12 +402,19 @@ export default function AdminPage() {
     setShowAddForm(false);
   };
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     setBetImage(file);
 
     if (betImagePreview) URL.revokeObjectURL(betImagePreview);
-    setBetImagePreview(file ? URL.createObjectURL(file) : null);
+
+    if (file) {
+      const compressed = await compressImage(file);
+      setBetImage(compressed);
+      setBetImagePreview(URL.createObjectURL(compressed));
+    } else {
+      setBetImagePreview(null);
+    }
   };
 
   const handleAddCode = async (e: React.FormEvent) => {
@@ -566,6 +695,8 @@ export default function AdminPage() {
     };
   }, [dailyStats]);
 
+  const usedPercent = Math.min(100, (storageStats.usedBytes / storageStats.totalBytes) * 100);
+
   if (!authorized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#040a04] px-3 sm:px-4" dir="rtl">
@@ -618,6 +749,43 @@ export default function AdminPage() {
             </button>
           )}
         </div>
+
+        <SectionCard>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-[22px] sm:text-[26px] md:text-3xl font-black text-white">💾 مساحة التخزين</h2>
+            <button
+              onClick={refreshStorageStats}
+              className="rounded-xl bg-emerald-500 hover:bg-emerald-400 px-4 py-2 text-[14px] sm:text-[15px] font-black text-black"
+            >
+              تحديث
+            </button>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-[20px] border border-emerald-500/15 bg-black/25 px-4 py-4">
+              <div className="text-[14px] sm:text-[16px] text-emerald-100/70">المساحة الكلية</div>
+              <div className="mt-2 text-[24px] sm:text-[28px] md:text-3xl font-black text-white">{formatBytes(storageStats.totalBytes)}</div>
+            </div>
+
+            <div className="rounded-[20px] border border-emerald-500/15 bg-black/25 px-4 py-4">
+              <div className="text-[14px] sm:text-[16px] text-emerald-100/70">المساحة المستهلكة</div>
+              <div className="mt-2 text-[24px] sm:text-[28px] md:text-3xl font-black text-emerald-400">{formatBytes(storageStats.usedBytes)}</div>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <div className="mb-2 flex items-center justify-between text-[13px] sm:text-[14px] text-emerald-100/70">
+              <span>نسبة الاستخدام</span>
+              <span>{usedPercent.toFixed(2)}%</span>
+            </div>
+            <div className="h-3 overflow-hidden rounded-full bg-black/35">
+              <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-yellow-400" style={{ width: `${usedPercent}%` }} />
+            </div>
+            <p className="mt-3 text-[13px] sm:text-[14px] md:text-base text-emerald-100/70">
+              الصور يتم ضغطها تلقائيًا قبل الرفع، وأي صور أو أكواد تعدي عليها 30 يوم يتم حذفها تلقائيًا عند فتح صفحة الأدمن.
+            </p>
+          </div>
+        </SectionCard>
 
         {showAddForm && (
           <SectionCard>
@@ -677,7 +845,7 @@ export default function AdminPage() {
 
                 {betImagePreview && (
                   <div className="mt-4 overflow-hidden rounded-[22px] sm:rounded-[24px] border border-emerald-500/15 bg-black/25 p-3 sm:p-4">
-                    <p className="mb-3 text-[14px] sm:text-[16px] md:text-lg font-bold text-emerald-100/80">معاينة الصورة قبل الإضافة</p>
+                    <p className="mb-3 text-[14px] sm:text-[16px] md:text-lg font-bold text-emerald-100/80">معاينة الصورة بعد الضغط التلقائي</p>
                     <img src={betImagePreview} alt="معاينة صورة الكود" className="mx-auto block max-h-[380px] md:max-h-[500px] w-full rounded-2xl object-contain" />
                   </div>
                 )}
@@ -849,7 +1017,7 @@ export default function AdminPage() {
 
                   {getPublicUrl(code.code_image_url) && (
                     <div className="mb-4 overflow-hidden rounded-[20px] border border-emerald-500/15 bg-black/20 p-3">
-                      <p className="mb-2 text-[14px] sm:text-[15px] md:text-lg font-bold text-emerald-100/80">صورة الرهان</p>
+                      <p className="mb-2 text-[14px] sm:text-[15px] md:text-lg font-bold text-emerald-100/80">📸 صورة الرهان</p>
                       <img
                         src={getPublicUrl(code.code_image_url)!}
                         alt="صورة الرهان"
@@ -860,9 +1028,7 @@ export default function AdminPage() {
 
                   {getPublicUrl(code.proof_image_url) && (
                     <div className="mb-4 overflow-hidden rounded-[20px] border border-emerald-500/15 bg-black/20 p-3">
-                      <p className="mb-2 text-[14px] sm:text-[15px] md:text-lg font-bold text-emerald-100/80">
-                        {code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
-                      </p>
+                      <p className="mb-2 text-[14px] sm:text-[15px] md:text-lg font-bold text-emerald-100/80">📸 صورة إثبات الربح</p>
                       <img
                         src={getPublicUrl(code.proof_image_url)!}
                         alt={code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
