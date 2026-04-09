@@ -63,45 +63,6 @@ function getPublicUrl(path?: string | null) {
   return data.publicUrl;
 }
 
-
-async function optimizeImage(file: File): Promise<File> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-
-    const url = URL.createObjectURL(file);
-    img.src = url;
-
-    img.onload = () => {
-      const MAX_WIDTH = 900;
-
-      let width = img.width;
-      let height = img.height;
-
-      if (width > MAX_WIDTH) {
-        height = height * (MAX_WIDTH / width);
-        width = MAX_WIDTH;
-      }
-
-      canvas.width = width;
-      canvas.height = height;
-
-      ctx?.drawImage(img, 0, 0, width, height);
-
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) return resolve(file);
-          const newFile = new File([blob], file.name, { type: 'image/jpeg' });
-          resolve(newFile);
-        },
-        'image/jpeg',
-        0.85
-      );
-    };
-  });
-}
-
 function fileName(prefix: string, file: File) {
   const ext = file.name.split('.').pop() || 'jpg';
   const rand = Math.random().toString(36).slice(2, 10);
@@ -422,8 +383,7 @@ export default function AdminPage() {
       setSavingCode(true);
       setMessage('');
 
-      const uploadedPath = const optimized = await optimizeImage(betImage);
-      await uploadImage(optimized, 'bet-images');
+      const uploadedPath = await uploadImage(betImage, 'bet-images');
 
       const { error } = await supabase.from('codes').insert([
         {
@@ -481,8 +441,7 @@ export default function AdminPage() {
       try {
         setMessage('');
 
-        const uploadedPath = const optimizedFile = await optimizeImage(file);
-        await uploadImage(optimizedFile, nextStatus === 'won' ? 'proof-win' : 'proof-refund');
+        const uploadedPath = await uploadImage(file, nextStatus === 'won' ? 'proof-win' : 'proof-refund');
 
         const payload: Partial<CodeItem> & { proof_type: string; won_at: string } = {
           status: nextStatus,
@@ -550,8 +509,7 @@ export default function AdminPage() {
       try {
         setMessage('');
 
-        const uploadedPath = const optimizedFile = await optimizeImage(file);
-        await uploadImage(optimizedFile, code.status === 'refund' ? 'proof-refund' : 'proof-win');
+        const uploadedPath = await uploadImage(file, code.status === 'refund' ? 'proof-refund' : 'proof-win');
         const oldPath = code.proof_image_url;
 
         const { error } = await supabase.from('codes').update({ proof_image_url: uploadedPath }).eq('id', code.id);
