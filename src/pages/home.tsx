@@ -1,13 +1,38 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import { supabase, GIFT_URL, MELBET_TUTORIAL_URL, CODE_USAGE_URL } from '../lib/supabase';
 
 const AR_LATN_LOCALE = 'ar-EG-u-nu-latn';
 
-function
+const HOME_CACHE_KEY = 'home_page_cache_v1';
+const HOME_CACHE_TTL = 1000 * 60 * 3;
 
-const [visibleCount, setVisibleCount] = useState(15);
- normalizeStoragePath(path?: string | null) {
+function loadHomeCache() {
+  try {
+    const raw = localStorage.getItem(HOME_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.timestamp || Date.now() - parsed.timestamp > HOME_CACHE_TTL) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function saveHomeCache(payload: { activeDayStr: string; codes: any[]; allWonCodes: any[] }) {
+  try {
+    localStorage.setItem(
+      HOME_CACHE_KEY,
+      JSON.stringify({
+        timestamp: Date.now(),
+        ...payload,
+      })
+    );
+  } catch {}
+}
+
+
+function normalizeStoragePath(path?: string | null) {
   if (!path) return null;
   let clean = String(path).trim();
   clean = clean.replace(/^https?:\/\/[^/]+\/storage\/v1\/object\/public\/codes\//, '');
@@ -60,7 +85,7 @@ function CodeCard({ code }: { code: any }) {
     <div className="relative bg-gradient-to-br from-[#0f1a0f] to-[#0a120a] border border-green-900/40 rounded-2xl overflow-hidden hover:border-green-500/60 transition-all hover:shadow-[0_0_30px_rgba(34,197,94,0.15)]">
       <div className="h-1 bg-gradient-to-r from-green-600 via-green-400 to-green-600" />
 
-      {imageUrl && <img loading="lazy" src={imageUrl} alt="code" className="w-full h-auto block" />}
+      {imageUrl && <img src={imageUrl} alt="code" loading="lazy" className="w-full h-auto block" />}
 
       <div className="p-5 space-y-4">
         <div className="flex items-center justify-between gap-3">
@@ -147,9 +172,19 @@ export default function HomePage() {
   const [allWonCodes, setAllWonCodes] = useState<any[]>([]);
   const [activeDayStr, setActiveDayStr] = useState(new Date().toISOString().split('T')[0]);
   const [isLoading, setIsLoading] = useState(true);
+  const [visibleCodesCount, setVisibleCodesCount] = useState(15);
+  const [visibleWonCount, setVisibleWonCount] = useState(15);
 
   useEffect(() => {
     let mounted = true;
+
+    const cached = loadHomeCache();
+    if (cached && mounted) {
+      setActiveDayStr(cached.activeDayStr || new Date().toISOString().split('T')[0]);
+      setCodes(cached.codes || []);
+      setAllWonCodes(cached.allWonCodes || []);
+      setIsLoading(false);
+    }
 
     async function ensureCurrentDay() {
       const { data, error } = await supabase.from('app_state').select('*').eq('key', 'current_day').maybeSingle();
@@ -167,7 +202,7 @@ export default function HomePage() {
 
     async function loadData() {
       try {
-        setIsLoading(true);
+        setIsLoading((prev) => prev && !cached);
 
         const currentDay = await ensureCurrentDay();
 
@@ -191,12 +226,20 @@ export default function HomePage() {
 
         if (!mounted) return;
 
+        const mappedActive = (activeRows || []).map(mapCode);
+        const mappedWon = (wonRows || []).map(mapCode);
+
         setActiveDayStr(currentDay);
-        setCodes((activeRows || []).map(mapCode));
-        setAllWonCodes((wonRows || []).map(mapCode));
+        setCodes(mappedActive);
+        setAllWonCodes(mappedWon);
+        saveHomeCache({
+          activeDayStr: currentDay,
+          codes: mappedActive,
+          allWonCodes: mappedWon,
+        });
       } catch (err) {
         console.error('HOME LOAD ERROR:', err);
-        if (!mounted) return;
+        if (!mounted || cached) return;
         setCodes([]);
         setAllWonCodes([]);
       } finally {
@@ -210,7 +253,9 @@ export default function HomePage() {
     };
   }, []);
 
-  const todayWonCodes = allWonCodes.filter((c: any) => c.dayDate === activeDayStr);
+  const todayWonCodes = useMemo(() => allWonCodes.filter((c: any) => c.dayDate === activeDayStr), [allWonCodes, activeDayStr]);
+  const visibleCodes = useMemo(() => codes.slice(0, visibleCodesCount), [codes, visibleCodesCount]);
+  const visibleWonCodes = useMemo(() => todayWonCodes.slice(0, visibleWonCount), [todayWonCodes, visibleWonCount]);
 
   return (
     <div className="space-y-10" dir="rtl">
@@ -273,12 +318,37 @@ export default function HomePage() {
             {[...Array(3)].map((_, i) => (
               <div key={i} className="bg-[#0f1a0f] border border-green-900/30 rounded-2xl h-64 animate-pulse" />
             ))}
+            </div>
+
+            {visibleWonCount < todayWonCodes.length && (
+              <div className="flex justify-center">
+                <button
+                  onClick={() => setVisibleWonCount((prev) => prev + 15)}
+                  className="bg-green-500/20 hover:bg-green-500/30 border border-green-500/40 text-green-400 font-black text-lg px-8 py-3 rounded-2xl transition-all"
+                >
+                  عرض المزيد
+                </button>
+              </div>
+            )}
           </div>
         ) : codes.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {codes.map((code: any) => (
-              <CodeCard key={code.id} code={code} />
-            ))}
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {visibleCodes.map((code: any) => (
+                <CodeCard key={code.id} code={code} />
+              ))}
+            </div>
+
+            {visibleCodesCount < codes.length && (
+              <div className="flex justify-center">
+                <button
+                  onClick={() => setVisibleCodesCount((prev) => prev + 15)}
+                  className="bg-green-500/20 hover:bg-green-500/30 border border-green-500/40 text-green-400 font-black text-lg px-8 py-3 rounded-2xl transition-all"
+                >
+                  عرض المزيد
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-center py-20 space-y-5 bg-[#0f1a0f]/50 border border-green-900/30 rounded-3xl">
@@ -307,8 +377,9 @@ export default function HomePage() {
             <p className="text-gray-500 text-sm mt-1">🏆 الأكواد اللي كسبت النهاردة</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {todayWonCodes.map((code: any, idx: number) => (
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {visibleWonCodes.map((code: any, idx: number) => (
               <div
                 key={code.id}
                 className="bg-[#0a120a] border border-green-700/50 rounded-2xl overflow-hidden"
@@ -341,7 +412,8 @@ export default function HomePage() {
                     <div className="text-xs text-gray-500 mb-2 font-bold" dir="rtl">
                       📸 {code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
                     </div>
-                    <img loading="lazy"
+                    <img
+                      loading="lazy"
                       src={code.proofImageUrl}
                       alt={code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
                       className="w-full h-auto rounded-xl block cursor-pointer hover:opacity-90"
