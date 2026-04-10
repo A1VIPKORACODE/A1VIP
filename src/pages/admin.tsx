@@ -55,6 +55,13 @@ function addOneDay(dateStr: string) {
   return utcDate.toISOString().slice(0, 10);
 }
 
+function subtractOneDay(dateStr: string) {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const utcDate = new Date(Date.UTC(year, month - 1, day));
+  utcDate.setUTCDate(utcDate.getUTCDate() - 1);
+  return utcDate.toISOString().slice(0, 10);
+}
+
 function getPublicUrl(path?: string | null) {
   if (!path) return null;
   if (path.startsWith('http')) return path;
@@ -641,6 +648,90 @@ export default function AdminPage() {
     }
   };
 
+
+  async function changeCurrentDay(newDay: string) {
+    const { error } = await supabase
+      .from('app_state')
+      .upsert([{ key: 'current_day', value: newDay }], { onConflict: 'key' });
+
+    if (error) throw error;
+    setCurrentDay(newDay);
+  }
+
+  async function handleGoNextDay() {
+    try {
+      setMessage('');
+      const newDay = addOneDay(currentDay);
+      await changeCurrentDay(newDay);
+      await ensureDailyStats(newDay);
+      await loadAll();
+      setMessage(`تم الانتقال إلى اليوم التالي: ${newDay}`);
+    } catch (err: any) {
+      setMessage(`حصل خطأ أثناء الانتقال لليوم التالي: ${err?.message || 'unknown error'}`);
+    }
+  }
+
+  async function handleGoPreviousDay() {
+    const newDay = subtractOneDay(currentDay);
+
+    try {
+      setMessage('');
+
+      const { data: currentDayRows, error: rowsError } = await supabase
+        .from('codes')
+        .select('*')
+        .eq('day_date', currentDay);
+
+      if (rowsError) throw rowsError;
+
+      const rows = (currentDayRows || []) as CodeItem[];
+
+      if (rows.length > 0) {
+        const choice = window.prompt(
+          `أنت راجع من ${currentDay} إلى ${newDay}\n` +
+          `اكتب رقم الاختيار:\n` +
+          `1 = انقل أكواد اليوم الحالي إلى اليوم السابق\n` +
+          `2 = اخفِها مؤقتاً لحد ما ترجع لليوم ده تاني\n` +
+          `3 = احذفها نهائياً\n` +
+          `أي قيمة أخرى = إلغاء`
+        );
+
+        if (choice === '1') {
+          const { error: moveError } = await supabase
+            .from('codes')
+            .update({ day_date: newDay })
+            .eq('day_date', currentDay);
+
+          if (moveError) throw moveError;
+        } else if (choice === '2') {
+          // لا نغيّر أي شيء. الأكواد ستختفي تلقائياً لأن الصفحة الرئيسية تعرض أكواد اليوم المحدد فقط.
+        } else if (choice === '3') {
+          for (const row of rows) {
+            await removeImage(row.code_image_url);
+            await removeImage(row.proof_image_url);
+          }
+
+          const { error: deleteError } = await supabase
+            .from('codes')
+            .delete()
+            .eq('day_date', currentDay);
+
+          if (deleteError) throw deleteError;
+        } else {
+          setMessage('تم إلغاء الرجوع لليوم السابق');
+          return;
+        }
+      }
+
+      await changeCurrentDay(newDay);
+      await ensureDailyStats(newDay);
+      await loadAll();
+      setMessage(`تم الرجوع إلى اليوم السابق: ${newDay}`);
+    } catch (err: any) {
+      setMessage(`حصل خطأ أثناء الرجوع لليوم السابق: ${err?.message || 'unknown error'}`);
+    }
+  }
+
   const stats = useMemo(() => {
     return {
       totalCodes: dailyStats?.total_codes ?? 0,
@@ -814,6 +905,40 @@ export default function AdminPage() {
             >
               نهاية اليوم - أحسب الإحصائيات
             </button>
+          </div>
+        </SectionCard>
+
+        <SectionCard>
+          <h2 className="mb-4 sm:mb-5 text-[20px] sm:text-[23px] md:text-[26px] font-black text-white">🗓️ التحكم في اليوم</h2>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between rounded-[16px] border border-emerald-500/15 bg-black/25 px-3 py-3 gap-3">
+              <span className="text-[13px] sm:text-[15px] md:text-[18px] text-emerald-100/80">اليوم الحالي المعروض في الموقع</span>
+              <span className="text-[18px] sm:text-[20px] md:text-[22px] font-black text-yellow-400">{currentDay}</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={handleGoPreviousDay}
+                className="rounded-[16px] sm:rounded-[18px] bg-sky-700 hover:bg-sky-600 px-4 py-3 text-[15px] sm:text-[16px] md:text-[18px] font-black text-white"
+              >
+                ⬅️ اليوم السابق
+              </button>
+
+              <button
+                onClick={handleGoNextDay}
+                className="rounded-[16px] sm:rounded-[18px] bg-emerald-600 hover:bg-emerald-500 px-4 py-3 text-[15px] sm:text-[16px] md:text-[18px] font-black text-white"
+              >
+                اليوم التالي ➡️
+              </button>
+            </div>
+
+            <div className="rounded-[16px] border border-yellow-500/15 bg-black/25 px-3 py-3 text-[12px] sm:text-[13px] md:text-[14px] leading-7 text-yellow-100/80">
+              عند الرجوع لليوم السابق ولو فيه أكواد في اليوم الحالي، هيظهر لك اختيار:
+              <br />1- نقل الأكواد لليوم السابق
+              <br />2- إخفاؤها مؤقتاً لحد ما ترجع لليوم ده
+              <br />3- حذفها نهائياً
+            </div>
           </div>
         </SectionCard>
 
