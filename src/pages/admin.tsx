@@ -7,7 +7,7 @@ const BUCKET = 'codes';
 const TOTAL_STORAGE_BYTES = 1024 * 1024 * 1024;
 const LAST_MOVE_KEY = 'admin_last_move_snapshot';
 
-type CodeStatus = 'active' | 'won' | 'refund' | 'hidden';
+type CodeStatus = 'active' | 'won' | 'refund';
 
 type CodeItem = {
   id: string;
@@ -157,7 +157,6 @@ export default function AdminPage() {
   const [calendarDay, setCalendarDay] = useState('');
   const [lastMoveAction, setLastMoveAction] = useState<{ ids: string[]; fromDay: string; toDay: string } | null>(null);
 
-
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved && Number(saved) > Date.now()) {
@@ -183,7 +182,6 @@ export default function AdminPage() {
   useEffect(() => {
     if (currentDay) setCalendarDay(currentDay);
   }, [currentDay]);
-
 
   useEffect(() => {
     return () => {
@@ -665,6 +663,128 @@ export default function AdminPage() {
     }
   };
 
+
+  function toggleSelectedCode(id: string) {
+    setSelectedCodeIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
+  }
+
+  function rememberLastMove(ids: string[], fromDay: string, toDay: string) {
+    const snapshot = { ids, fromDay, toDay };
+    setLastMoveAction(snapshot);
+    localStorage.setItem(LAST_MOVE_KEY, JSON.stringify(snapshot));
+  }
+
+  async function moveCodesToDay(targetDay: string) {
+    try {
+      setMessage('');
+      if (!currentDay || targetDay === currentDay) {
+        setMessage('اختر يوم مختلف');
+        return;
+      }
+
+      const idsToMove =
+        moveMode === 'selected'
+          ? selectedCodeIds
+          : [...codes.map((c) => c.id), ...wonCodes.map((c) => c.id)];
+
+      if (!idsToMove.length) {
+        setMessage(moveMode === 'selected' ? 'حدد أكواد أولاً' : 'لا توجد أكواد لنقلها');
+        return;
+      }
+
+      const ok = window.confirm(
+        moveMode === 'selected'
+          ? `نقل ${idsToMove.length} كود إلى ${targetDay}؟`
+          : `نقل كل أكواد يوم ${currentDay} إلى ${targetDay}؟`
+      );
+      if (!ok) return;
+
+      const { error } = await supabase.from('codes').update({ day_date: targetDay }).in('id', idsToMove);
+      if (error) throw error;
+
+      rememberLastMove(idsToMove, currentDay, targetDay);
+
+      await supabase
+        .from('app_state')
+        .upsert([{ key: 'current_day', value: targetDay }], { onConflict: 'key' });
+
+      await recalcDayStats(currentDay);
+      await ensureDailyStats(targetDay);
+      await recalcDayStats(targetDay);
+      setCurrentDay(targetDay);
+      setSelectedCodeIds([]);
+      await loadAll();
+      setMessage(`تم نقل ${idsToMove.length} كود إلى ${targetDay}`);
+    } catch (err: any) {
+      setMessage(`حصل خطأ أثناء النقل: ${err?.message || 'unknown error'}`);
+    }
+  }
+
+  async function undoLastMove() {
+    try {
+      if (!lastMoveAction?.ids?.length) {
+        setMessage('لا يوجد نقل سابق للتراجع عنه');
+        return;
+      }
+
+      const ok = window.confirm(`التراجع عن آخر نقل؟ سيتم إرجاع ${lastMoveAction.ids.length} كود من ${lastMoveAction.toDay} إلى ${lastMoveAction.fromDay}`);
+      if (!ok) return;
+
+      const { error } = await supabase
+        .from('codes')
+        .update({ day_date: lastMoveAction.fromDay })
+        .in('id', lastMoveAction.ids);
+
+      if (error) throw error;
+
+      await supabase
+        .from('app_state')
+        .upsert([{ key: 'current_day', value: lastMoveAction.fromDay }], { onConflict: 'key' });
+
+      await ensureDailyStats(lastMoveAction.fromDay);
+      await recalcDayStats(lastMoveAction.fromDay);
+      await ensureDailyStats(lastMoveAction.toDay);
+      await recalcDayStats(lastMoveAction.toDay);
+
+      setCurrentDay(lastMoveAction.fromDay);
+      setLastMoveAction(null);
+      localStorage.removeItem(LAST_MOVE_KEY);
+      setSelectedCodeIds([]);
+      await loadAll();
+      setMessage('تم التراجع عن آخر نقل');
+    } catch (err: any) {
+      setMessage(`حصل خطأ أثناء التراجع: ${err?.message || 'unknown error'}`);
+    }
+  }
+
+  async function goToCalendarDay() {
+    try {
+      if (!calendarDay) {
+        setMessage('اختر يوم من التقويم');
+        return;
+      }
+      await supabase
+        .from('app_state')
+        .upsert([{ key: 'current_day', value: calendarDay }], { onConflict: 'key' });
+
+      await ensureDailyStats(calendarDay);
+      setCurrentDay(calendarDay);
+      await loadAll();
+      setMessage(`تم الانتقال إلى ${calendarDay}`);
+    } catch (err: any) {
+      setMessage(`حصل خطأ أثناء تغيير اليوم: ${err?.message || 'unknown error'}`);
+    }
+  }
+
+  async function goPreviousDayQuick() {
+    await moveCodesToDay(subtractOneDay(currentDay));
+  }
+
+  async function goNextDayQuick() {
+    await moveCodesToDay(addOneDay(currentDay));
+  }
+
+
   const stats = useMemo(() => {
     return {
       totalCodes: dailyStats?.total_codes ?? 0,
@@ -838,6 +958,81 @@ export default function AdminPage() {
             >
               نهاية اليوم - أحسب الإحصائيات
             </button>
+          </div>
+        </SectionCard>
+
+        <SectionCard>
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-[20px] sm:text-[23px] md:text-[26px] font-black text-white">🗓️ أداة نقل والتحكم في اليوم</h2>
+            <div className="rounded-full bg-yellow-500/10 border border-yellow-500/30 px-4 py-2 text-[13px] sm:text-[14px] font-black text-yellow-300">
+              اليوم الحالي: {currentDay}
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-[16px] border border-emerald-500/15 bg-black/25 p-3">
+              <div className="mb-2 text-[13px] sm:text-[14px] font-bold text-emerald-200">نوع النقل</div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setMoveMode('all')}
+                  className={`flex-1 rounded-[14px] px-3 py-2 text-[13px] sm:text-[14px] font-black ${moveMode === 'all' ? 'bg-emerald-500 text-black' : 'bg-black/30 text-white border border-emerald-500/20'}`}
+                >
+                  نقل كل الأكواد
+                </button>
+                <button
+                  onClick={() => setMoveMode('selected')}
+                  className={`flex-1 rounded-[14px] px-3 py-2 text-[13px] sm:text-[14px] font-black ${moveMode === 'selected' ? 'bg-yellow-500 text-black' : 'bg-black/30 text-white border border-yellow-500/20'}`}
+                >
+                  نقل المحدد فقط
+                </button>
+              </div>
+              <div className="mt-2 text-[12px] sm:text-[13px] text-gray-400">المحدد الآن: {selectedCodeIds.length}</div>
+            </div>
+
+            <div className="rounded-[16px] border border-emerald-500/15 bg-black/25 p-3">
+              <div className="mb-2 text-[13px] sm:text-[14px] font-bold text-emerald-200">التحكم بالتقويم</div>
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={calendarDay}
+                  onChange={(e) => setCalendarDay(e.target.value)}
+                  className="flex-1 rounded-[14px] border border-emerald-500/20 bg-black/35 px-3 py-2 text-[13px] sm:text-[14px] text-white outline-none"
+                />
+                <button
+                  onClick={goToCalendarDay}
+                  className="rounded-[14px] bg-emerald-500 hover:bg-emerald-400 px-4 py-2 text-[13px] sm:text-[14px] font-black text-black"
+                >
+                  انتقال
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <button
+              onClick={goPreviousDayQuick}
+              className="rounded-[16px] bg-sky-700 hover:bg-sky-600 px-4 py-3 text-[14px] sm:text-[15px] md:text-[17px] font-black text-white"
+            >
+              ⬅️ نقل {moveMode === 'selected' ? 'المحدد' : 'الأكواد'} لليوم السابق
+            </button>
+
+            <button
+              onClick={goNextDayQuick}
+              className="rounded-[16px] bg-violet-600 hover:bg-violet-500 px-4 py-3 text-[14px] sm:text-[15px] md:text-[17px] font-black text-white"
+            >
+              نقل {moveMode === 'selected' ? 'المحدد' : 'الأكواد'} لليوم التالي ➡️
+            </button>
+
+            <button
+              onClick={undoLastMove}
+              className="rounded-[16px] border border-yellow-500/30 bg-yellow-500/10 hover:bg-yellow-500/20 px-4 py-3 text-[14px] sm:text-[15px] md:text-[17px] font-black text-yellow-300"
+            >
+              🔄 Undo آخر نقل
+            </button>
+          </div>
+
+          <div className="mt-4 rounded-[16px] border border-emerald-500/15 bg-black/25 px-3 py-3 text-[12px] sm:text-[13px] md:text-[14px] leading-7 text-emerald-100/80">
+            لو اخترت <strong>نقل المحدد فقط</strong>، علّم الأكواد من القوائم تحت أولاً. ولو اخترت <strong>نقل كل الأكواد</strong>، كل أكواد اليوم الحالي هتتنقل معاك.
           </div>
         </SectionCard>
 
