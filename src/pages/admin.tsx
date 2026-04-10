@@ -296,6 +296,56 @@ export default function AdminPage() {
     }
   }
 
+  
+  async function moveTodayToNext() {
+    if (!currentDay) return;
+    const d = new Date(currentDay);
+    d.setDate(d.getDate() + 1);
+    const nextDay = d.toISOString().split('T')[0];
+
+    const ok = confirm('نقل كل أكواد اليوم إلى اليوم التالي؟');
+    if (!ok) return;
+
+    const { error } = await supabase
+      .from('codes')
+      .update({ day_date: nextDay })
+      .eq('day_date', currentDay);
+
+    if (!error) {
+      await supabase.from('app_state').update({ value: nextDay }).eq('key','current_day');
+      setCurrentDay(nextDay);
+      loadAll();
+      alert('تم نقل الأكواد لليوم التالي');
+    } else {
+      alert('حصل خطأ أثناء النقل');
+    }
+  }
+
+  async function moveTodayToPrev() {
+    if (!currentDay) return;
+    const d = new Date(currentDay);
+    d.setDate(d.getDate() - 1);
+    const prevDay = d.toISOString().split('T')[0];
+
+    const ok = confirm('نقل كل أكواد اليوم إلى اليوم السابق؟');
+    if (!ok) return;
+
+    const { error } = await supabase
+      .from('codes')
+      .update({ day_date: prevDay })
+      .eq('day_date', currentDay);
+
+    if (!error) {
+      await supabase.from('app_state').update({ value: prevDay }).eq('key','current_day');
+      setCurrentDay(prevDay);
+      loadAll();
+      alert('تم نقل الأكواد لليوم السابق');
+    } else {
+      alert('حصل خطأ أثناء النقل');
+    }
+  }
+
+
   async function loadAll() {
     try {
       setLoading(true);
@@ -881,7 +931,18 @@ export default function AdminPage() {
         )}
 
         <SectionCard>
-          <h2 className="mb-4 sm:mb-5 text-[20px] sm:text-[23px] md:text-[26px] font-black text-white">📊 إحصائيات اليوم</h2>
+          <h2 className="mb-4 sm:mb-5 text-[20px] sm:text-[23px] md:text-[26px] font-black text-white">📊 إحصائيات اليوم
+
+<div className="mt-4 flex gap-3">
+  <button onClick={moveTodayToPrev} className="bg-blue-500 px-4 py-2 rounded font-bold">
+    ⬅️ نقل لليوم السابق
+  </button>
+
+  <button onClick={moveTodayToNext} className="bg-purple-500 px-4 py-2 rounded font-bold">
+    ➡️ نقل لليوم التالي
+  </button>
+</div>
+</h2>
 
           <div className="space-y-3">
             <div className="flex items-center justify-between rounded-[16px] border border-emerald-500/15 bg-black/25 px-3 py-3 gap-3">
