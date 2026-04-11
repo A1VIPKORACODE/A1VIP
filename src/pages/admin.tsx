@@ -54,6 +54,13 @@ function addOneDay(dateStr: string) {
   return utcDate.toISOString().slice(0, 10);
 }
 
+function subtractOneDay(dateStr: string) {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const utcDate = new Date(Date.UTC(year, month - 1, day));
+  utcDate.setUTCDate(utcDate.getUTCDate() - 1);
+  return utcDate.toISOString().slice(0, 10);
+}
+
 function getPublicUrl(path?: string | null) {
   if (!path) return null;
   if (path.startsWith('http')) return path;
