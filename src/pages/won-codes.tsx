@@ -216,6 +216,7 @@ export default function WonCodesPage() {
           .select('*')
           .in('status', ['won', 'refund'])
           .gte('day_date', last30Start)
+          .lte('day_date', current)
           .order('day_date', { ascending: false })
           .order('won_at', { ascending: false });
 
