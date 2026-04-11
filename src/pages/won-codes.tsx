@@ -211,11 +211,13 @@ export default function WonCodesPage() {
             : today;
         const last30Start = date30DaysAgo();
 
+        // 🔧 FIX: Only show codes up to current_day (no future days)
         const { data, error } = await supabase
           .from('codes')
           .select('*')
           .in('status', ['won', 'refund'])
           .gte('day_date', last30Start)
+          .lte('day_date', current)   // ✅ إضافة شرط عدم عرض الأكواد من أيام مستقبلية
           .order('day_date', { ascending: false })
           .order('won_at', { ascending: false });
 
