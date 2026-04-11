@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabase';
 
 const BUCKET = 'codes';
 const TOTAL_STORAGE_BYTES = 1024 * 1024 * 1024;
-const LAST_MOVE_KEY = 'admin_last_move_snapshot';
 
 type CodeStatus = 'active' | 'won' | 'refund';
 
@@ -124,17 +123,17 @@ async function getStorageStats(): Promise<StorageStats> {
 
 function SectionCard({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-[18px] sm:rounded-[18px] md:rounded-[18px] sm:rounded-[20px] border border-emerald-500/20 bg-[linear-gradient(180deg,rgba(16,40,24,0.96),rgba(7,18,10,0.98))] p-3 sm:p-3.5 md:p-4 shadow-[0_0_22px_rgba(16,185,129,0.07)]">
+    <div className="rounded-[22px] sm:rounded-[26px] md:rounded-[30px] border border-emerald-500/20 bg-[linear-gradient(180deg,rgba(16,40,24,0.96),rgba(7,18,10,0.98))] p-3.5 sm:p-4 md:p-5 shadow-[0_0_30px_rgba(16,185,129,0.08)]">
       {children}
     </div>
   );
 }
 
 export default function AdminPage() {
-  const [user, setUser] = useState<any>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
+  const [authorized, setAuthorized] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [storageStats, setStorageStats] = useState<StorageStats>({ usedBytes: 0, totalBytes: TOTAL_STORAGE_BYTES });
@@ -152,51 +151,34 @@ export default function AdminPage() {
   const [betImage, setBetImage] = useState<File | null>(null);
   const [betImagePreview, setBetImagePreview] = useState<string | null>(null);
   const [savingCode, setSavingCode] = useState(false);
-  const [selectedCodeIds, setSelectedCodeIds] = useState<string[]>([]);
-  const [moveMode, setMoveMode] = useState<'all' | 'selected'>('all');
-  const [calendarDay, setCalendarDay] = useState('');
-  const [lastMoveAction, setLastMoveAction] = useState<{ ids: string[]; fromDay: string; toDay: string } | null>(null);
 
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (error) {
+        console.error('AUTH SESSION ERROR:', error);
+      }
       if (!mounted) return;
-      setUser(data.user ?? null);
-      setAuthLoading(false);
+      setAuthorized(!!data.session);
+      setAuthChecked(true);
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setAuthLoading(false);
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+      setAuthorized(!!session);
+      setAuthChecked(true);
     });
 
     return () => {
-      mounted = false;
-      subscription.unsubscribe();
+      mounted = false
+      authListener.subscription.unsubscribe();
     };
   }, []);
 
   useEffect(() => {
-    if (user) loadAll();
-  }, [user]);
-
-  useEffect(() => {
-    const raw = localStorage.getItem(LAST_MOVE_KEY);
-    if (!raw) return;
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed?.ids?.length && parsed?.fromDay && parsed?.toDay) {
-        setLastMoveAction(parsed);
-      }
-    } catch (_) {}
-  }, []);
-
-  useEffect(() => {
-    if (currentDay) setCalendarDay(currentDay);
-  }, [currentDay]);
+    if (authorized) loadAll();
+  }, [authorized]);
 
   useEffect(() => {
     return () => {
@@ -356,8 +338,6 @@ export default function AdminPage() {
       setWonCodes((wonData || []) as CodeItem[]);
       setDailyStats((statsData as DailyStat) || null);
       await refreshStorageStats();
-      const visibleIds = [...((activeData || []) as CodeItem[]), ...((wonData || []) as CodeItem[])].map((item) => item.id);
-      setSelectedCodeIds((prev) => prev.filter((id) => visibleIds.includes(id)));
     } catch (err: any) {
       setMessage(`حصل خطأ أثناء تحميل البيانات: ${err?.message || 'unknown error'}`);
     } finally {
@@ -367,33 +347,43 @@ export default function AdminPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMessage('');
 
-    const email = loginEmail.trim();
-    if (!email || !loginPassword) {
-      setMessage('اكتب الإيميل وكلمة السر');
+    if (!email.trim() || !password.trim()) {
+      setMessage('اكتب الإيميل والباسورد');
       return;
     }
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password: loginPassword,
-    });
+    try {
+      setLoading(true);
+      setMessage('');
 
-    if (error) {
-      setMessage('بيانات الدخول غير صحيحة');
-      return;
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (error) throw error;
+      setMessage('');
+    } catch (err: any) {
+      setMessage(`فشل تسجيل الدخول: ${err?.message || 'unknown error'}`);
+    } finally {
+      setLoading(false);
     }
-
-    setLoginPassword('');
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setLoginPassword('');
-    setLoginEmail('');
-    setMessage('');
+    try {
+      setLoading(true);
+      await supabase.auth.signOut();
+      setAuthorized(false);
+      setEmail('');
+      setPassword('');
+      setMessage('');
+    } catch (err: any) {
+      setMessage(`فشل تسجيل الخروج: ${err?.message || 'unknown error'}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const resetForm = () => {
@@ -690,128 +680,6 @@ export default function AdminPage() {
     }
   };
 
-
-  function toggleSelectedCode(id: string) {
-    setSelectedCodeIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
-  }
-
-  function rememberLastMove(ids: string[], fromDay: string, toDay: string) {
-    const snapshot = { ids, fromDay, toDay };
-    setLastMoveAction(snapshot);
-    localStorage.setItem(LAST_MOVE_KEY, JSON.stringify(snapshot));
-  }
-
-  async function moveCodesToDay(targetDay: string) {
-    try {
-      setMessage('');
-      if (!currentDay || targetDay === currentDay) {
-        setMessage('اختر يوم مختلف');
-        return;
-      }
-
-      const idsToMove =
-        moveMode === 'selected'
-          ? selectedCodeIds
-          : [...codes.map((c) => c.id), ...wonCodes.map((c) => c.id)];
-
-      if (!idsToMove.length) {
-        setMessage(moveMode === 'selected' ? 'حدد أكواد أولاً' : 'لا توجد أكواد لنقلها');
-        return;
-      }
-
-      const ok = window.confirm(
-        moveMode === 'selected'
-          ? `نقل ${idsToMove.length} كود إلى ${targetDay}؟`
-          : `نقل كل أكواد يوم ${currentDay} إلى ${targetDay}؟`
-      );
-      if (!ok) return;
-
-      const { error } = await supabase.from('codes').update({ day_date: targetDay }).in('id', idsToMove);
-      if (error) throw error;
-
-      rememberLastMove(idsToMove, currentDay, targetDay);
-
-      await supabase
-        .from('app_state')
-        .upsert([{ key: 'current_day', value: targetDay }], { onConflict: 'key' });
-
-      await recalcDayStats(currentDay);
-      await ensureDailyStats(targetDay);
-      await recalcDayStats(targetDay);
-      setCurrentDay(targetDay);
-      setSelectedCodeIds([]);
-      await loadAll();
-      setMessage(`تم نقل ${idsToMove.length} كود إلى ${targetDay}`);
-    } catch (err: any) {
-      setMessage(`حصل خطأ أثناء النقل: ${err?.message || 'unknown error'}`);
-    }
-  }
-
-  async function undoLastMove() {
-    try {
-      if (!lastMoveAction?.ids?.length) {
-        setMessage('لا يوجد نقل سابق للتراجع عنه');
-        return;
-      }
-
-      const ok = window.confirm(`التراجع عن آخر نقل؟ سيتم إرجاع ${lastMoveAction.ids.length} كود من ${lastMoveAction.toDay} إلى ${lastMoveAction.fromDay}`);
-      if (!ok) return;
-
-      const { error } = await supabase
-        .from('codes')
-        .update({ day_date: lastMoveAction.fromDay })
-        .in('id', lastMoveAction.ids);
-
-      if (error) throw error;
-
-      await supabase
-        .from('app_state')
-        .upsert([{ key: 'current_day', value: lastMoveAction.fromDay }], { onConflict: 'key' });
-
-      await ensureDailyStats(lastMoveAction.fromDay);
-      await recalcDayStats(lastMoveAction.fromDay);
-      await ensureDailyStats(lastMoveAction.toDay);
-      await recalcDayStats(lastMoveAction.toDay);
-
-      setCurrentDay(lastMoveAction.fromDay);
-      setLastMoveAction(null);
-      localStorage.removeItem(LAST_MOVE_KEY);
-      setSelectedCodeIds([]);
-      await loadAll();
-      setMessage('تم التراجع عن آخر نقل');
-    } catch (err: any) {
-      setMessage(`حصل خطأ أثناء التراجع: ${err?.message || 'unknown error'}`);
-    }
-  }
-
-  async function goToCalendarDay() {
-    try {
-      if (!calendarDay) {
-        setMessage('اختر يوم من التقويم');
-        return;
-      }
-      await supabase
-        .from('app_state')
-        .upsert([{ key: 'current_day', value: calendarDay }], { onConflict: 'key' });
-
-      await ensureDailyStats(calendarDay);
-      setCurrentDay(calendarDay);
-      await loadAll();
-      setMessage(`تم الانتقال إلى ${calendarDay}`);
-    } catch (err: any) {
-      setMessage(`حصل خطأ أثناء تغيير اليوم: ${err?.message || 'unknown error'}`);
-    }
-  }
-
-  async function goPreviousDayQuick() {
-    await moveCodesToDay(subtractOneDay(currentDay));
-  }
-
-  async function goNextDayQuick() {
-    await moveCodesToDay(addOneDay(currentDay));
-  }
-
-
   const stats = useMemo(() => {
     return {
       totalCodes: dailyStats?.total_codes ?? 0,
@@ -822,477 +690,94 @@ export default function AdminPage() {
 
   const usedPercent = Math.min(100, (storageStats.usedBytes / storageStats.totalBytes) * 100);
 
-  if (authLoading) {
+  if (!authChecked) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#040a04] px-3 sm:px-4 text-white" dir="rtl" style={{ fontFamily: "'Cairo', 'Tajawal', sans-serif" }}>
-        جاري التحميل...
+      <div className="min-h-screen flex items-center justify-center bg-[#040a04] px-3 sm:px-4" dir="rtl" style={{ fontFamily: "'Cairo', 'Tajawal', sans-serif" }}>
+        <div className="w-full max-w-md rounded-[18px] sm:rounded-[20px] md:rounded-[32px] border border-emerald-500/20 bg-[linear-gradient(180deg,rgba(16,40,24,0.96),rgba(7,18,10,0.98))] p-4 sm:p-5 md:p-6 shadow-[0_0_40px_rgba(16,185,129,0.08)]">
+          <div className="space-y-3">
+            <div className="h-6 w-40 mx-auto rounded bg-emerald-500/10 animate-pulse" />
+            <div className="h-12 rounded bg-black/30 animate-pulse" />
+            <div className="h-12 rounded bg-black/30 animate-pulse" />
+            <div className="h-12 rounded bg-emerald-500/20 animate-pulse" />
+          </div>
+        </div>
       </div>
     );
   }
 
-  if (!user) {
+  if (!authorized) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#040a04] px-3 sm:px-4" dir="rtl" style={{ fontFamily: "'Cairo', 'Tajawal', sans-serif" }}>
+      <div className="min-h-screen flex items-center justify-center bg-[#040a04] px-3 sm:px-4" dir="rtl">
         <form
           onSubmit={handleLogin}
-          className="w-full max-w-md rounded-[18px] sm:rounded-[20px] sm:rounded-[28px] md:rounded-[32px] border border-emerald-500/20 bg-[linear-gradient(180deg,rgba(16,40,24,0.96),rgba(7,18,10,0.98))] p-4 sm:p-5 md:p-6 shadow-[0_0_40px_rgba(16,185,129,0.08)]"
+          className="w-full max-w-md rounded-[24px] sm:rounded-[28px] md:rounded-[32px] border border-emerald-500/20 bg-[linear-gradient(180deg,rgba(16,40,24,0.96),rgba(7,18,10,0.98))] p-4 sm:p-5 md:p-6 shadow-[0_0_40px_rgba(16,185,129,0.08)]"
         >
-          <h1 className="mb-5 sm:mb-6 text-center text-[20px] sm:text-[23px] md:text-[26px] font-black text-white">تسجيل دخول الأدمن</h1>
-
-          <input
-            type="email"
-            placeholder="اكتب الإيميل"
-            value={loginEmail}
-            onChange={(e) => setLoginEmail(e.target.value)}
-            className="mb-3 w-full rounded-[16px] sm:rounded-[18px] border border-emerald-500/20 bg-black/35 px-3 py-2.5 text-[14px] sm:text-[15px] md:text-[15px] text-white outline-none"
-          />
+          <h1 className="mb-5 sm:mb-6 text-center text-[24px] sm:text-[28px] md:text-3xl font-black text-white">دخول لوحة الإدارة</h1>
 
           <input
             type="password"
             placeholder="اكتب كلمة السر"
-            value={loginPassword}
-            onChange={(e) => setLoginPassword(e.target.value)}
-            className="mb-4 w-full rounded-[16px] sm:rounded-[18px] border border-emerald-500/20 bg-black/35 px-3 py-2.5 text-[14px] sm:text-[15px] md:text-[15px] text-white outline-none"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="mb-4 w-full rounded-2xl border border-emerald-500/20 bg-black/35 px-4 py-3 text-[16px] sm:text-[17px] md:text-base text-white outline-none"
           />
 
-          <button className="w-full rounded-[16px] sm:rounded-[18px] bg-emerald-500 py-3 text-[16px] sm:text-[17px] md:text-[18px] font-black text-black">
+          <button className="w-full rounded-2xl bg-emerald-500 py-3 text-[18px] sm:text-[19px] md:text-xl font-black text-black">
             دخول
           </button>
 
-          {message && <p className="mt-4 text-center text-[13px] sm:text-[14px] md:text-[14px] font-bold text-red-400">{message}</p>}
+          {message && <p className="mt-4 text-center text-[14px] sm:text-[15px] md:text-base font-bold text-red-400">{message}</p>}
         </form>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#030903] px-3 sm:px-3 py-3 sm:py-5 md:py-6 text-white" dir="rtl" style={{ fontFamily: "'Cairo', 'Tajawal', sans-serif" }}>
+    <div className="min-h-screen bg-[#030903] px-3 sm:px-4 py-5 sm:py-6 md:py-8 text-white" dir="rtl">
       <div className="mx-auto max-w-5xl space-y-6 sm:space-y-8">
         <div className="flex flex-col items-start justify-between gap-3 sm:gap-4 md:flex-row md:items-center">
           <div>
-            <h1 className="text-[22px] sm:text-[26px] md:text-[30px] font-black text-white">⚙️ لوحة الإدارة</h1>
-            <p className="mt-1.5 sm:mt-2 text-[13px] sm:text-[14px] md:text-[15px] text-emerald-200/70">إضافة وإدارة الأكواد بشكل سريع ومريح</p>
+            <h1 className="text-[26px] sm:text-[32px] md:text-4xl font-black text-white">⚙️ لوحة الإدارة</h1>
+            <p className="mt-1.5 sm:mt-2 text-[14px] sm:text-[16px] md:text-lg text-emerald-200/70">إضافة وإدارة الأكواد بشكل سريع ومريح</p>
           </div>
 
           {!showAddForm ? (
             <button
               onClick={() => setShowAddForm(true)}
-              className="w-full md:w-auto rounded-[16px] sm:rounded-[18px] bg-emerald-500 hover:bg-emerald-400 px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 text-[15px] sm:text-[16px] md:text-[17px] font-black text-black shadow-[0_0_20px_rgba(16,185,129,0.22)]"
+              className="w-full md:w-auto rounded-2xl bg-emerald-500 hover:bg-emerald-400 px-5 sm:px-6 md:px-8 py-3 sm:py-3.5 text-[17px] sm:text-[18px] md:text-xl font-black text-black shadow-[0_0_20px_rgba(16,185,129,0.22)]"
             >
               + إضافة كود
             </button>
           ) : (
             <button
               onClick={() => setShowAddForm(false)}
-              className="w-full md:w-auto rounded-[16px] sm:rounded-[18px] bg-emerald-500 hover:bg-emerald-400 px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 text-[15px] sm:text-[16px] md:text-[17px] font-black text-black shadow-[0_0_20px_rgba(16,185,129,0.22)]"
+              className="w-full md:w-auto rounded-2xl bg-emerald-500 hover:bg-emerald-400 px-5 sm:px-6 md:px-8 py-3 sm:py-3.5 text-[17px] sm:text-[18px] md:text-xl font-black text-black shadow-[0_0_20px_rgba(16,185,129,0.22)]"
             >
               ✕ إغلاق
             </button>
           )}
         </div>
 
-        {showAddForm && (
-          <SectionCard>
-            <h2 className="mb-5 sm:mb-6 text-[20px] sm:text-[23px] md:text-[26px] font-black text-white">+ إضافة كود جديد</h2>
-
-            <form onSubmit={handleAddCode} className="space-y-4 sm:space-y-5">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-2 block text-[13px] sm:text-[14px] md:text-[15px] text-emerald-100/80">نوع التوقع (اختياري)</label>
-                  <input
-                    value={tipOutcome}
-                    onChange={(e) => setTipOutcome(e.target.value)}
-                    placeholder="مثال: 1 أو X2 أو أقل من 7.5"
-                    className="w-full rounded-[16px] sm:rounded-[18px] border border-emerald-500/20 bg-black/35 px-3 py-2.5 text-[14px] sm:text-[15px] md:text-[16px] text-white outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-[13px] sm:text-[14px] md:text-[15px] text-emerald-100/80">نسبة ربح الكود</label>
-                  <input
-                    value={odds}
-                    onChange={(e) => setOdds(e.target.value)}
-                    placeholder="مثال: 1.75"
-                    className="w-full rounded-[16px] sm:rounded-[18px] border border-emerald-500/20 bg-black/35 px-3 py-2.5 text-[14px] sm:text-[15px] md:text-[16px] text-white outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-[13px] sm:text-[14px] md:text-[15px] text-emerald-100/80">وصف الكود (اختياري)</label>
-                <input
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="اكتب وصف الرهان"
-                  className="w-full rounded-[16px] sm:rounded-[18px] border border-emerald-500/20 bg-black/35 px-3 py-2.5 text-[14px] sm:text-[15px] md:text-[16px] text-white outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-[13px] sm:text-[14px] md:text-[15px] text-emerald-100/80">الكود</label>
-                <input
-                  value={tipCode}
-                  onChange={(e) => setTipCode(e.target.value)}
-                  placeholder="مثال: MC-ARS-2024"
-                  className="w-full rounded-[16px] sm:rounded-[18px] border border-emerald-500/20 bg-black/35 px-3 sm:px-3 py-2.5 text-center text-[16px] sm:text-[18px] md:text-[20px] tracking-[0.12em] sm:tracking-[0.14em] text-white outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-[13px] sm:text-[14px] md:text-[15px] text-emerald-100/80">صورة الكود (إجباري)</label>
-                <label className="flex cursor-pointer items-center justify-center rounded-3xl border-2 border-dashed border-emerald-500/25 bg-black/20 px-4 py-5 sm:py-6 text-[14px] sm:text-[15px] md:text-[17px] text-emerald-100/70">
-                  📸 رفع صورة للكود
-                  <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-                </label>
-
-                {betImage && <p className="mt-3 text-[12px] sm:text-[13px] md:text-[14px] text-emerald-400 break-all">{betImage.name}</p>}
-
-                {betImagePreview && (
-                  <div className="mt-4 overflow-hidden rounded-[18px] sm:rounded-[18px] sm:rounded-[20px] border border-emerald-500/15 bg-black/25 p-3 sm:p-4">
-                    <p className="mb-3 text-[13px] sm:text-[14px] md:text-[15px] font-bold text-emerald-100/80">معاينة الصورة</p>
-                    <img src={betImagePreview} alt="معاينة صورة الكود" className="mx-auto block max-h-[260px] md:max-h-[380px] w-full rounded-[16px] sm:rounded-[18px] object-contain" />
-                  </div>
-                )}
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <button
-                  type="submit"
-                  disabled={savingCode}
-                  className="rounded-[16px] sm:rounded-[18px] bg-emerald-500 hover:bg-emerald-400 px-4 py-3 text-[16px] sm:text-[18px] md:text-[20px] font-black text-black shadow-[0_0_20px_rgba(16,185,129,0.22)] disabled:opacity-60"
-                >
-                  {savingCode ? 'جاري الإضافة...' : '✅ إضافة الكود'}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="rounded-[16px] sm:rounded-[18px] border border-emerald-500/20 bg-black/25 px-4 py-3 text-[16px] sm:text-[18px] md:text-[20px] font-black text-white"
-                >
-                  إلغاء
-                </button>
-              </div>
-            </form>
-          </SectionCard>
-        )}
-
-        <SectionCard>
-          <h2 className="mb-4 sm:mb-5 text-[20px] sm:text-[23px] md:text-[26px] font-black text-white">📊 إحصائيات اليوم</h2>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between rounded-[16px] border border-emerald-500/15 bg-black/25 px-3 py-3 gap-3">
-              <span className="text-[13px] sm:text-[15px] md:text-[18px] text-emerald-100/80">إجمالي الأكواد</span>
-              <span className="text-[22px] sm:text-[26px] md:text-[30px] font-black text-white">{stats.totalCodes}</span>
-            </div>
-
-            <div className="flex items-center justify-between rounded-[16px] border border-emerald-500/15 bg-black/25 px-3 py-3 gap-3">
-              <span className="text-[13px] sm:text-[15px] md:text-[18px] text-emerald-100/80">الأكواد الرابحة</span>
-              <span className="text-[22px] sm:text-[26px] md:text-[30px] font-black text-emerald-400">{stats.wonCodes}</span>
-            </div>
-
-            <div className="flex items-center justify-between rounded-[16px] border border-yellow-500/15 bg-black/25 px-3 py-3 gap-3">
-              <span className="text-[13px] sm:text-[15px] md:text-[18px] text-yellow-100/80">مجموع ربح الأكواد</span>
-              <span className="text-[20px] sm:text-[24px] md:text-[28px] font-black text-yellow-400">{formatOdds(stats.combinedOdds)}</span>
-            </div>
-
-            <button
-              onClick={handleEndDay}
-              className="mt-3 w-full rounded-[16px] bg-yellow-500 hover:bg-yellow-400 px-5 py-4 text-[15px] sm:text-[16px] md:text-[18px] font-black text-black shadow-[0_0_20px_rgba(234,179,8,0.18)]"
-            >
-              نهاية اليوم - أحسب الإحصائيات
-            </button>
-          </div>
-        </SectionCard>
-
-        <SectionCard>
-          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-[20px] sm:text-[23px] md:text-[26px] font-black text-white">🗓️ أداة نقل والتحكم في اليوم</h2>
-            <div className="rounded-full bg-yellow-500/10 border border-yellow-500/30 px-4 py-2 text-[13px] sm:text-[14px] font-black text-yellow-300">
-              اليوم الحالي: {currentDay}
-            </div>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="rounded-[16px] border border-emerald-500/15 bg-black/25 p-3">
-              <div className="mb-2 text-[13px] sm:text-[14px] font-bold text-emerald-200">نوع النقل</div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setMoveMode('all')}
-                  className={`flex-1 rounded-[14px] px-3 py-2 text-[13px] sm:text-[14px] font-black ${moveMode === 'all' ? 'bg-emerald-500 text-black' : 'bg-black/30 text-white border border-emerald-500/20'}`}
-                >
-                  نقل كل الأكواد
-                </button>
-                <button
-                  onClick={() => setMoveMode('selected')}
-                  className={`flex-1 rounded-[14px] px-3 py-2 text-[13px] sm:text-[14px] font-black ${moveMode === 'selected' ? 'bg-yellow-500 text-black' : 'bg-black/30 text-white border border-yellow-500/20'}`}
-                >
-                  نقل المحدد فقط
-                </button>
-              </div>
-              <div className="mt-2 text-[12px] sm:text-[13px] text-gray-400">المحدد الآن: {selectedCodeIds.length}</div>
-            </div>
-
-            <div className="rounded-[16px] border border-emerald-500/15 bg-black/25 p-3">
-              <div className="mb-2 text-[13px] sm:text-[14px] font-bold text-emerald-200">التحكم بالتقويم</div>
-              <div className="flex gap-2">
-                <input
-                  type="date"
-                  value={calendarDay}
-                  onChange={(e) => setCalendarDay(e.target.value)}
-                  className="flex-1 rounded-[14px] border border-emerald-500/20 bg-black/35 px-3 py-2 text-[13px] sm:text-[14px] text-white outline-none"
-                />
-                <button
-                  onClick={goToCalendarDay}
-                  className="rounded-[14px] bg-emerald-500 hover:bg-emerald-400 px-4 py-2 text-[13px] sm:text-[14px] font-black text-black"
-                >
-                  انتقال
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <button
-              onClick={goPreviousDayQuick}
-              className="rounded-[16px] bg-sky-700 hover:bg-sky-600 px-4 py-3 text-[14px] sm:text-[15px] md:text-[17px] font-black text-white"
-            >
-              ⬅️ نقل {moveMode === 'selected' ? 'المحدد' : 'الأكواد'} لليوم السابق
-            </button>
-
-            <button
-              onClick={goNextDayQuick}
-              className="rounded-[16px] bg-violet-600 hover:bg-violet-500 px-4 py-3 text-[14px] sm:text-[15px] md:text-[17px] font-black text-white"
-            >
-              نقل {moveMode === 'selected' ? 'المحدد' : 'الأكواد'} لليوم التالي ➡️
-            </button>
-
-            <button
-              onClick={undoLastMove}
-              className="rounded-[16px] border border-yellow-500/30 bg-yellow-500/10 hover:bg-yellow-500/20 px-4 py-3 text-[14px] sm:text-[15px] md:text-[17px] font-black text-yellow-300"
-            >
-              🔄 Undo آخر نقل
-            </button>
-          </div>
-
-          <div className="mt-4 rounded-[16px] border border-emerald-500/15 bg-black/25 px-3 py-3 text-[12px] sm:text-[13px] md:text-[14px] leading-7 text-emerald-100/80">
-            لو اخترت <strong>نقل المحدد فقط</strong>، علّم الأكواد من القوائم تحت أولاً. ولو اخترت <strong>نقل كل الأكواد</strong>، كل أكواد اليوم الحالي هتتنقل معاك.
-          </div>
-        </SectionCard>
-
-        <div>
-          <h2 className="mb-4 text-[20px] sm:text-[23px] md:text-[26px] font-black text-white">📋 أكواد اليوم النشطة ({codes.length})</h2>
-
-          {loading ? (
-            <SectionCard>
-              <div className="text-center text-[15px] sm:text-[16px] md:text-[17px] text-gray-400">جاري التحميل...</div>
-            </SectionCard>
-          ) : codes.length === 0 ? (
-            <SectionCard>
-              <div className="text-center text-[15px] sm:text-[16px] md:text-[17px] text-gray-400">لا توجد أكواد اليوم</div>
-            </SectionCard>
-          ) : (
-            <div className="space-y-4">
-              {codes.map((code) => (
-                <SectionCard key={code.id}>
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <label className="inline-flex items-center gap-2 text-[13px] sm:text-[14px] font-bold text-emerald-200 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selectedCodeIds.includes(code.id)}
-                        onChange={() => toggleSelectedCode(code.id)}
-                        className="h-4 w-4 accent-emerald-500"
-                      />
-                      تحديد
-                    </label>
-                  </div>
-                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                    <div className="rounded-[16px] sm:rounded-[18px] border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[14px] sm:text-[15px] md:text-[18px] font-black text-emerald-400">
-                      {code.tip_outcome || 'بدون نوع'}
-                    </div>
-
-                    <div className="text-center w-full md:w-auto order-last md:order-none">
-                      <div className="text-[18px] sm:text-[22px] md:text-[24px] font-black tracking-[0.12em] sm:tracking-[0.14em] md:tracking-[0.16em] break-all text-white">
-                        {code.tip_code}
-                      </div>
-                    </div>
-
-                    <div className="text-[18px] sm:text-[20px] md:text-[22px] font-black text-yellow-400">x{formatOdds(code.odds)}</div>
-                  </div>
-
-                  {code.description && (
-                    <div className="mb-4 rounded-[16px] sm:rounded-[18px] border border-emerald-500/15 bg-black/25 px-3 py-2.5 text-[15px] sm:text-[16px] md:text-xl text-gray-300">
-                      {code.description}
-                    </div>
-                  )}
-
-                  {getPublicUrl(code.code_image_url) && (
-                    <div className="mb-4 overflow-hidden rounded-[16px] border border-emerald-500/15 bg-black/20 p-3">
-                      <img
-                        src={getPublicUrl(code.code_image_url)!}
-                        alt="صورة الرهان"
-                        className="mx-auto block max-h-[240px] md:max-h-[340px] w-full rounded-[16px] sm:rounded-[18px] object-contain"
-                      />
-                    </div>
-                  )}
-
-                  <div className="grid gap-3 md:grid-cols-3">
-                    <button
-                      onClick={() => handleWinOrRefund(code, 'won')}
-                      className="rounded-[16px] sm:rounded-[18px] bg-emerald-600 hover:bg-emerald-500 px-3 py-2.5 text-[15px] sm:text-[16px] md:text-[18px] font-black text-white"
-                    >
-                      ✅ كسب
-                    </button>
-
-                    <button
-                      onClick={() => handleWinOrRefund(code, 'refund')}
-                      className="rounded-[16px] sm:rounded-[18px] bg-sky-700 hover:bg-sky-600 px-3 py-2.5 text-[15px] sm:text-[16px] md:text-[18px] font-black text-white"
-                    >
-                      📥 استرداد
-                    </button>
-
-                    <button
-                      onClick={() => handleDelete(code)}
-                      className="rounded-[16px] sm:rounded-[18px] bg-red-900 hover:bg-red-800 px-3 py-2.5 text-[15px] sm:text-[16px] md:text-[18px] font-black text-white"
-                    >
-                      🗑️ حذف
-                    </button>
-                  </div>
-                </SectionCard>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div>
-          <h2 className="mb-4 text-[20px] sm:text-[23px] md:text-[26px] font-black text-white">🏆 أكواد اليوم الرابحة ({wonCodes.length})</h2>
-
-          {loading ? (
-            <SectionCard>
-              <div className="text-center text-[15px] sm:text-[16px] md:text-[17px] text-gray-400">جاري التحميل...</div>
-            </SectionCard>
-          ) : wonCodes.length === 0 ? (
-            <SectionCard>
-              <div className="text-center text-[15px] sm:text-[16px] md:text-[17px] text-gray-400">لا توجد أكواد رابحة اليوم</div>
-            </SectionCard>
-          ) : (
-            <div className="space-y-4">
-              {wonCodes.map((code) => (
-                <SectionCard key={code.id}>
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <label className="inline-flex items-center gap-2 text-[13px] sm:text-[14px] font-bold text-emerald-200 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selectedCodeIds.includes(code.id)}
-                        onChange={() => toggleSelectedCode(code.id)}
-                        className="h-4 w-4 accent-emerald-500"
-                      />
-                      تحديد
-                    </label>
-                  </div>
-                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                    <div className="rounded-[16px] sm:rounded-[18px] border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[14px] sm:text-[15px] md:text-[18px] font-black text-emerald-400">
-                      {code.tip_outcome || 'بدون نوع'}
-                    </div>
-
-                    <div className="text-center w-full md:w-auto order-last md:order-none">
-                      <div className="text-[18px] sm:text-[22px] md:text-[24px] font-black tracking-[0.12em] sm:tracking-[0.14em] md:tracking-[0.16em] break-all text-white">
-                        {code.tip_code}
-                      </div>
-                    </div>
-
-                    <div className="rounded-[16px] sm:rounded-[18px] bg-emerald-500 px-3 py-1.5 text-[14px] sm:text-[15px] md:text-[17px] font-black text-black">
-                      {code.status === 'refund' ? '📥 استرداد' : '✅ كسب'}
-                    </div>
-                  </div>
-
-                  <div className="mb-4 flex items-center justify-between gap-3 rounded-[16px] sm:rounded-[18px] border border-yellow-500/15 bg-black/25 px-3 py-2.5">
-                    <span className="text-[14px] sm:text-[15px] md:text-lg text-yellow-100/80">نسبة الربح الحالية</span>
-                    <span className="text-[18px] sm:text-[20px] md:text-[22px] font-black text-yellow-400">x{formatOdds(code.odds)}</span>
-                  </div>
-
-                  {code.description && (
-                    <div className="mb-4 rounded-[16px] sm:rounded-[18px] border border-emerald-500/15 bg-black/25 px-3 py-2.5 text-[15px] sm:text-[16px] md:text-xl text-gray-300">
-                      {code.description}
-                    </div>
-                  )}
-
-                  {getPublicUrl(code.code_image_url) && (
-                    <div className="mb-4 overflow-hidden rounded-[16px] border border-emerald-500/15 bg-black/20 p-3">
-                      <p className="mb-2 text-[14px] sm:text-[15px] md:text-lg font-bold text-emerald-100/80">📸 صورة الرهان</p>
-                      <img
-                        src={getPublicUrl(code.code_image_url)!}
-                        alt="صورة الرهان"
-                        className="mx-auto block max-h-[240px] md:max-h-[340px] w-full rounded-[16px] sm:rounded-[18px] object-contain"
-                      />
-                    </div>
-                  )}
-
-                  {getPublicUrl(code.proof_image_url) && (
-                    <div className="mb-4 overflow-hidden rounded-[16px] border border-emerald-500/15 bg-black/20 p-3">
-                      <p className="mb-2 text-[14px] sm:text-[15px] md:text-lg font-bold text-emerald-100/80">📸 صورة إثبات الربح</p>
-                      <img
-                        src={getPublicUrl(code.proof_image_url)!}
-                        alt={code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
-                        className="mx-auto block max-h-[240px] md:max-h-[340px] w-full rounded-[16px] sm:rounded-[18px] object-contain"
-                      />
-                    </div>
-                  )}
-
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    <button
-                      onClick={() => handleEditWonOdds(code)}
-                      className="rounded-[16px] sm:rounded-[18px] bg-yellow-500 hover:bg-yellow-400 px-3 py-2.5 text-[14px] sm:text-[15px] md:text-[17px] font-black text-black"
-                    >
-                      ✏️ تعديل النسبة
-                    </button>
-
-                    <button
-                      onClick={() => handleChangeWonProofImage(code)}
-                      className="rounded-[16px] sm:rounded-[18px] bg-violet-600 hover:bg-violet-500 px-3 py-2.5 text-[14px] sm:text-[15px] md:text-[17px] font-black text-white"
-                    >
-                      🖼️ تغيير الصورة
-                    </button>
-
-                    <button
-                      onClick={() => handleToggleWonStatus(code)}
-                      className="rounded-[16px] sm:rounded-[18px] bg-sky-700 hover:bg-sky-600 px-3 py-2.5 text-[14px] sm:text-[15px] md:text-[17px] font-black text-white"
-                    >
-                      {code.status === 'won' ? '📥 تحويل لاسترداد' : '✅ تحويل لكسب'}
-                    </button>
-
-                    <button
-                      onClick={() => handleDelete(code)}
-                      className="rounded-[16px] sm:rounded-[18px] bg-red-900 hover:bg-red-800 px-3 py-2.5 text-[14px] sm:text-[15px] md:text-[17px] font-black text-white"
-                    >
-                      🗑️ حذف نهائي
-                    </button>
-                  </div>
-                </SectionCard>
-              ))}
-            </div>
-          )}
-        </div>
-
         <SectionCard>
           <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-[18px] sm:text-[20px] md:text-[22px] font-black text-white">💾 مساحة التخزين</h2>
+            <h2 className="text-[22px] sm:text-[26px] md:text-3xl font-black text-white">💾 مساحة التخزين</h2>
             <button
               onClick={refreshStorageStats}
-              className="rounded-xl bg-emerald-500 hover:bg-emerald-400 px-3 py-1.5 text-[14px] sm:text-[15px] font-black text-black"
+              className="rounded-xl bg-emerald-500 hover:bg-emerald-400 px-4 py-2 text-[14px] sm:text-[15px] font-black text-black"
             >
               تحديث
             </button>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
-            <div className="rounded-[16px] border border-emerald-500/15 bg-black/25 px-3 py-3">
-              <div className="text-[12px] sm:text-[13px] text-emerald-100/70">المساحة الكلية</div>
-              <div className="mt-2 text-[20px] sm:text-[23px] md:text-[26px] font-black text-white">{formatBytes(storageStats.totalBytes)}</div>
+            <div className="rounded-[20px] border border-emerald-500/15 bg-black/25 px-4 py-4">
+              <div className="text-[14px] sm:text-[16px] text-emerald-100/70">المساحة الكلية</div>
+              <div className="mt-2 text-[24px] sm:text-[28px] md:text-3xl font-black text-white">{formatBytes(storageStats.totalBytes)}</div>
             </div>
 
-            <div className="rounded-[16px] border border-emerald-500/15 bg-black/25 px-3 py-3">
-              <div className="text-[12px] sm:text-[13px] text-emerald-100/70">المساحة المستهلكة</div>
-              <div className="mt-2 text-[20px] sm:text-[23px] md:text-[26px] font-black text-emerald-400">{formatBytes(storageStats.usedBytes)}</div>
+            <div className="rounded-[20px] border border-emerald-500/15 bg-black/25 px-4 py-4">
+              <div className="text-[14px] sm:text-[16px] text-emerald-100/70">المساحة المستهلكة</div>
+              <div className="mt-2 text-[24px] sm:text-[28px] md:text-3xl font-black text-emerald-400">{formatBytes(storageStats.usedBytes)}</div>
             </div>
           </div>
 
@@ -1304,23 +789,311 @@ export default function AdminPage() {
             <div className="h-3 overflow-hidden rounded-full bg-black/35">
               <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-yellow-400" style={{ width: `${usedPercent}%` }} />
             </div>
-            <p className="mt-3 text-[12px] sm:text-[13px] md:text-[14px] text-emerald-100/70">
+            <p className="mt-3 text-[13px] sm:text-[14px] md:text-base text-emerald-100/70">
               أي صور أو أكواد تعدي عليها 30 يوم يتم حذفها تلقائيًا عند فتح صفحة الأدمن.
             </p>
           </div>
         </SectionCard>
 
+        {showAddForm && (
+          <SectionCard>
+            <h2 className="mb-5 sm:mb-6 text-[24px] sm:text-[28px] md:text-3xl font-black text-white">+ إضافة كود جديد</h2>
+
+            <form onSubmit={handleAddCode} className="space-y-4 sm:space-y-5">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-[14px] sm:text-[16px] md:text-lg text-emerald-100/80">نوع التوقع (اختياري)</label>
+                  <input
+                    value={tipOutcome}
+                    onChange={(e) => setTipOutcome(e.target.value)}
+                    placeholder="مثال: 1 أو X2 أو أقل من 7.5"
+                    className="w-full rounded-2xl border border-emerald-500/20 bg-black/35 px-4 py-3 text-[15px] sm:text-[16px] md:text-lg text-white outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-[14px] sm:text-[16px] md:text-lg text-emerald-100/80">نسبة ربح الكود</label>
+                  <input
+                    value={odds}
+                    onChange={(e) => setOdds(e.target.value)}
+                    placeholder="مثال: 1.75"
+                    className="w-full rounded-2xl border border-emerald-500/20 bg-black/35 px-4 py-3 text-[15px] sm:text-[16px] md:text-lg text-white outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-[14px] sm:text-[16px] md:text-lg text-emerald-100/80">وصف الكود (اختياري)</label>
+                <input
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="اكتب وصف الرهان"
+                  className="w-full rounded-2xl border border-emerald-500/20 bg-black/35 px-4 py-3 text-[15px] sm:text-[16px] md:text-lg text-white outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-[14px] sm:text-[16px] md:text-lg text-emerald-100/80">الكود</label>
+                <input
+                  value={tipCode}
+                  onChange={(e) => setTipCode(e.target.value)}
+                  placeholder="مثال: MC-ARS-2024"
+                  className="w-full rounded-2xl border border-emerald-500/20 bg-black/35 px-3 sm:px-4 py-3 text-center text-[20px] sm:text-[24px] md:text-2xl tracking-[0.12em] sm:tracking-[0.14em] text-white outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-[14px] sm:text-[16px] md:text-lg text-emerald-100/80">صورة الكود (إجباري)</label>
+                <label className="flex cursor-pointer items-center justify-center rounded-3xl border-2 border-dashed border-emerald-500/25 bg-black/20 px-4 py-7 sm:py-8 text-[16px] sm:text-[18px] md:text-xl text-emerald-100/70">
+                  📸 رفع صورة للكود
+                  <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                </label>
+
+                {betImage && <p className="mt-3 text-[13px] sm:text-[14px] md:text-base text-emerald-400 break-all">{betImage.name}</p>}
+
+                {betImagePreview && (
+                  <div className="mt-4 overflow-hidden rounded-[22px] sm:rounded-[24px] border border-emerald-500/15 bg-black/25 p-3 sm:p-4">
+                    <p className="mb-3 text-[14px] sm:text-[16px] md:text-lg font-bold text-emerald-100/80">معاينة الصورة</p>
+                    <img src={betImagePreview} alt="معاينة صورة الكود" className="mx-auto block max-h-[380px] md:max-h-[500px] w-full rounded-2xl object-contain" />
+                  </div>
+                )}
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <button
+                  type="submit"
+                  disabled={savingCode}
+                  className="rounded-2xl bg-emerald-500 hover:bg-emerald-400 px-5 py-3.5 text-[20px] sm:text-[22px] md:text-2xl font-black text-black shadow-[0_0_20px_rgba(16,185,129,0.22)] disabled:opacity-60"
+                >
+                  {savingCode ? 'جاري الإضافة...' : '✅ إضافة الكود'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="rounded-2xl border border-emerald-500/20 bg-black/25 px-5 py-3.5 text-[20px] sm:text-[22px] md:text-2xl font-black text-white"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </form>
+          </SectionCard>
+        )}
+
+        <SectionCard>
+          <h2 className="mb-4 sm:mb-5 text-[24px] sm:text-[28px] md:text-3xl font-black text-white">📊 إحصائيات اليوم</h2>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between rounded-[20px] border border-emerald-500/15 bg-black/25 px-4 py-4 gap-3">
+              <span className="text-[15px] sm:text-[18px] md:text-2xl text-emerald-100/80">إجمالي الأكواد</span>
+              <span className="text-[28px] sm:text-[34px] md:text-4xl font-black text-white">{stats.totalCodes}</span>
+            </div>
+
+            <div className="flex items-center justify-between rounded-[20px] border border-emerald-500/15 bg-black/25 px-4 py-4 gap-3">
+              <span className="text-[15px] sm:text-[18px] md:text-2xl text-emerald-100/80">الأكواد الرابحة</span>
+              <span className="text-[28px] sm:text-[34px] md:text-4xl font-black text-emerald-400">{stats.wonCodes}</span>
+            </div>
+
+            <div className="flex items-center justify-between rounded-[20px] border border-yellow-500/15 bg-black/25 px-4 py-4 gap-3">
+              <span className="text-[15px] sm:text-[18px] md:text-2xl text-yellow-100/80">مجموع ربح الأكواد</span>
+              <span className="text-[24px] sm:text-[30px] md:text-4xl font-black text-yellow-400">{formatOdds(stats.combinedOdds)}</span>
+            </div>
+
+            <button
+              onClick={handleEndDay}
+              className="mt-3 w-full rounded-[20px] bg-yellow-500 hover:bg-yellow-400 px-5 py-4 text-[18px] sm:text-[20px] md:text-2xl font-black text-black shadow-[0_0_20px_rgba(234,179,8,0.18)]"
+            >
+              نهاية اليوم - أحسب الإحصائيات
+            </button>
+          </div>
+        </SectionCard>
+
+        <div>
+          <h2 className="mb-4 text-[24px] sm:text-[28px] md:text-3xl font-black text-white">📋 أكواد اليوم النشطة ({codes.length})</h2>
+
+          {loading ? (
+            <SectionCard>
+              <div className="text-center text-[17px] sm:text-[19px] md:text-xl text-gray-400">جاري التحميل...</div>
+            </SectionCard>
+          ) : codes.length === 0 ? (
+            <SectionCard>
+              <div className="text-center text-[17px] sm:text-[19px] md:text-xl text-gray-400">لا توجد أكواد اليوم</div>
+            </SectionCard>
+          ) : (
+            <div className="space-y-4">
+              {codes.map((code) => (
+                <SectionCard key={code.id}>
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-[16px] sm:text-[18px] md:text-2xl font-black text-emerald-400">
+                      {code.tip_outcome || 'بدون نوع'}
+                    </div>
+
+                    <div className="text-center w-full md:w-auto order-last md:order-none">
+                      <div className="text-[22px] sm:text-[28px] md:text-4xl font-black tracking-[0.12em] sm:tracking-[0.14em] md:tracking-[0.16em] break-all text-white">
+                        {code.tip_code}
+                      </div>
+                    </div>
+
+                    <div className="text-[22px] sm:text-[26px] md:text-3xl font-black text-yellow-400">x{formatOdds(code.odds)}</div>
+                  </div>
+
+                  {code.description && (
+                    <div className="mb-4 rounded-2xl border border-emerald-500/15 bg-black/25 px-4 py-3 text-[15px] sm:text-[16px] md:text-xl text-gray-300">
+                      {code.description}
+                    </div>
+                  )}
+
+                  {getPublicUrl(code.code_image_url) && (
+                    <div className="mb-4 overflow-hidden rounded-[20px] border border-emerald-500/15 bg-black/20 p-3">
+                      <img
+                        loading="lazy"
+                        src={getPublicUrl(code.code_image_url)!}
+                        alt="صورة الرهان"
+                        className="mx-auto block max-h-[380px] md:max-h-[520px] w-full rounded-2xl object-contain"
+                      />
+                    </div>
+                  )}
+
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <button
+                      onClick={() => handleWinOrRefund(code, 'won')}
+                      className="rounded-2xl bg-emerald-600 hover:bg-emerald-500 px-4 py-3 text-[18px] sm:text-[20px] md:text-2xl font-black text-white"
+                    >
+                      ✅ كسب
+                    </button>
+
+                    <button
+                      onClick={() => handleWinOrRefund(code, 'refund')}
+                      className="rounded-2xl bg-sky-700 hover:bg-sky-600 px-4 py-3 text-[18px] sm:text-[20px] md:text-2xl font-black text-white"
+                    >
+                      📥 استرداد
+                    </button>
+
+                    <button
+                      onClick={() => handleDelete(code)}
+                      className="rounded-2xl bg-red-900 hover:bg-red-800 px-4 py-3 text-[18px] sm:text-[20px] md:text-2xl font-black text-white"
+                    >
+                      🗑️ حذف
+                    </button>
+                  </div>
+                </SectionCard>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <h2 className="mb-4 text-[24px] sm:text-[28px] md:text-3xl font-black text-white">🏆 أكواد اليوم الرابحة ({wonCodes.length})</h2>
+
+          {loading ? (
+            <SectionCard>
+              <div className="text-center text-[17px] sm:text-[19px] md:text-xl text-gray-400">جاري التحميل...</div>
+            </SectionCard>
+          ) : wonCodes.length === 0 ? (
+            <SectionCard>
+              <div className="text-center text-[17px] sm:text-[19px] md:text-xl text-gray-400">لا توجد أكواد رابحة اليوم</div>
+            </SectionCard>
+          ) : (
+            <div className="space-y-4">
+              {wonCodes.map((code) => (
+                <SectionCard key={code.id}>
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-[16px] sm:text-[18px] md:text-2xl font-black text-emerald-400">
+                      {code.tip_outcome || 'بدون نوع'}
+                    </div>
+
+                    <div className="text-center w-full md:w-auto order-last md:order-none">
+                      <div className="text-[22px] sm:text-[28px] md:text-4xl font-black tracking-[0.12em] sm:tracking-[0.14em] md:tracking-[0.16em] break-all text-white">
+                        {code.tip_code}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl bg-emerald-500 px-4 py-2 text-[16px] sm:text-[18px] md:text-xl font-black text-black">
+                      {code.status === 'refund' ? '📥 استرداد' : '✅ كسب'}
+                    </div>
+                  </div>
+
+                  <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-yellow-500/15 bg-black/25 px-4 py-3">
+                    <span className="text-[14px] sm:text-[15px] md:text-lg text-yellow-100/80">نسبة الربح الحالية</span>
+                    <span className="text-[22px] sm:text-[24px] md:text-3xl font-black text-yellow-400">x{formatOdds(code.odds)}</span>
+                  </div>
+
+                  {code.description && (
+                    <div className="mb-4 rounded-2xl border border-emerald-500/15 bg-black/25 px-4 py-3 text-[15px] sm:text-[16px] md:text-xl text-gray-300">
+                      {code.description}
+                    </div>
+                  )}
+
+                  {getPublicUrl(code.code_image_url) && (
+                    <div className="mb-4 overflow-hidden rounded-[20px] border border-emerald-500/15 bg-black/20 p-3">
+                      <p className="mb-2 text-[14px] sm:text-[15px] md:text-lg font-bold text-emerald-100/80">📸 صورة الرهان</p>
+                      <img
+                        loading="lazy"
+                        src={getPublicUrl(code.code_image_url)!}
+                        alt="صورة الرهان"
+                        className="mx-auto block max-h-[380px] md:max-h-[520px] w-full rounded-2xl object-contain"
+                      />
+                    </div>
+                  )}
+
+                  {getPublicUrl(code.proof_image_url) && (
+                    <div className="mb-4 overflow-hidden rounded-[20px] border border-emerald-500/15 bg-black/20 p-3">
+                      <p className="mb-2 text-[14px] sm:text-[15px] md:text-lg font-bold text-emerald-100/80">📸 صورة إثبات الربح</p>
+                      <img
+                        loading="lazy"
+                        src={getPublicUrl(code.proof_image_url)!}
+                        alt={code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
+                        className="mx-auto block max-h-[380px] md:max-h-[520px] w-full rounded-2xl object-contain"
+                      />
+                    </div>
+                  )}
+
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <button
+                      onClick={() => handleEditWonOdds(code)}
+                      className="rounded-2xl bg-yellow-500 hover:bg-yellow-400 px-4 py-3 text-[16px] sm:text-[18px] md:text-xl font-black text-black"
+                    >
+                      ✏️ تعديل النسبة
+                    </button>
+
+                    <button
+                      onClick={() => handleChangeWonProofImage(code)}
+                      className="rounded-2xl bg-violet-600 hover:bg-violet-500 px-4 py-3 text-[16px] sm:text-[18px] md:text-xl font-black text-white"
+                    >
+                      🖼️ تغيير الصورة
+                    </button>
+
+                    <button
+                      onClick={() => handleToggleWonStatus(code)}
+                      className="rounded-2xl bg-sky-700 hover:bg-sky-600 px-4 py-3 text-[16px] sm:text-[18px] md:text-xl font-black text-white"
+                    >
+                      {code.status === 'won' ? '📥 تحويل لاسترداد' : '✅ تحويل لكسب'}
+                    </button>
+
+                    <button
+                      onClick={() => handleDelete(code)}
+                      className="rounded-2xl bg-red-900 hover:bg-red-800 px-4 py-3 text-[16px] sm:text-[18px] md:text-xl font-black text-white"
+                    >
+                      🗑️ حذف نهائي
+                    </button>
+                  </div>
+                </SectionCard>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="flex justify-center">
           <button
             onClick={handleLogout}
-            className="w-full sm:w-auto rounded-[16px] sm:rounded-[18px] border border-red-500/30 bg-red-500/10 px-6 py-3 text-[15px] sm:text-[16px] md:text-[17px] font-black text-red-400"
+            className="w-full sm:w-auto rounded-2xl border border-red-500/30 bg-red-500/10 px-6 py-3 text-[17px] sm:text-[18px] md:text-xl font-black text-red-400"
           >
             تسجيل خروج
           </button>
         </div>
 
         {message && (
-          <div className="rounded-[16px] sm:rounded-[18px] border border-emerald-500/15 bg-emerald-500/10 px-3 py-3 text-center text-[13px] sm:text-[14px] md:text-[15px] font-black text-emerald-300 break-words">
+          <div className="rounded-2xl border border-emerald-500/15 bg-emerald-500/10 px-4 py-4 text-center text-[14px] sm:text-[16px] md:text-lg font-black text-emerald-300 break-words">
             {message}
           </div>
         )}
