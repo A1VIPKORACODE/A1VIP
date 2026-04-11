@@ -1,3 +1,4 @@
+// admin.tsx (الإصدار النهائي مع إصلاح التحميل)
 import React, { ChangeEvent, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
@@ -165,42 +166,55 @@ export default function AdminPage() {
   const [calendarDay, setCalendarDay] = useState('');
   const [lastMoveAction, setLastMoveAction] = useState<{ ids: string[]; fromDay: string; toDay: string; timestamp: number } | null>(null);
 
-  // Helper to check if user is admin
+  // Helper to check if user is admin (safe, no throw)
   const isUserAdmin = async (email: string): Promise<boolean> => {
-    // Get admin email from app_state, fallback to default
-    const { data, error } = await supabase
-      .from('app_state')
-      .select('value')
-      .eq('key', 'admin_email')
-      .maybeSingle();
-    
-    if (!error && data?.value) {
-      return email === data.value;
+    try {
+      // Get admin email from app_state, fallback to default
+      const { data, error } = await supabase
+        .from('app_state')
+        .select('value')
+        .eq('key', 'admin_email')
+        .maybeSingle();
+      
+      if (!error && data?.value) {
+        return email === data.value;
+      }
+      // Default admin email (change this to your actual admin email)
+      return email === 'admin@a1vip.com';
+    } catch (err) {
+      console.error('isUserAdmin error:', err);
+      return false;
     }
-    // Default admin email (change this to your actual admin email)
-    return email === 'admin@a1vip.com';
   };
 
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!mounted) return;
-      const currentUser = data.user ?? null;
-      if (currentUser) {
-        const isAdmin = await isUserAdmin(currentUser.email || '');
-        if (!isAdmin) {
-          // Sign out non-admin users immediately
-          await supabase.auth.signOut();
-          setUser(null);
+    const checkUser = async () => {
+      try {
+        const { data } = await supabase.auth.getUser();
+        if (!mounted) return;
+        const currentUser = data.user ?? null;
+        if (currentUser) {
+          const isAdmin = await isUserAdmin(currentUser.email || '');
+          if (!isAdmin) {
+            await supabase.auth.signOut();
+            setUser(null);
+          } else {
+            setUser(currentUser);
+          }
         } else {
-          setUser(currentUser);
+          setUser(null);
         }
-      } else {
-        setUser(null);
+      } catch (err) {
+        console.error('Error checking user:', err);
+        if (mounted) setUser(null);
+      } finally {
+        if (mounted) setAuthLoading(false);
       }
-      setAuthLoading(false);
-    });
+    };
+
+    checkUser();
 
     const {
       data: { subscription },
@@ -217,7 +231,7 @@ export default function AdminPage() {
       } else {
         setUser(null);
       }
-      setAuthLoading(false);
+      if (mounted) setAuthLoading(false);
     });
 
     return () => {
@@ -769,7 +783,6 @@ export default function AdminPage() {
         return;
       }
 
-      // 🔧 FIX: Prevent moving codes to future days (beyond today)
       const today = new Date().toISOString().split('T')[0];
       if (targetDay > today) {
         setMessage('لا يمكن نقل الأكواد إلى يوم مستقبلي');
@@ -857,7 +870,6 @@ export default function AdminPage() {
         setMessage('اختر يوم من التقويم');
         return;
       }
-      // 🔧 FIX: Prevent moving to future days via calendar
       const today = new Date().toISOString().split('T')[0];
       if (calendarDay > today) {
         setMessage('لا يمكن الانتقال إلى يوم مستقبلي');
