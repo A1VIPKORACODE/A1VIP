@@ -109,6 +109,7 @@ function ProofCard({ code, index }: { code: CodeRow; index: number }) {
         <div className="mb-3 overflow-hidden rounded-[16px] sm:rounded-[18px] md:rounded-[22px] border border-green-900/40 bg-black/20 p-2.5 sm:p-3">
           <div className="mb-2 text-[11px] sm:text-[12px] md:text-sm font-black text-gray-300">📸 صورة الرهان</div>
           <img
+            loading="lazy"
             src={getImageUrl(code.code_image_url)!}
             alt="صورة الرهان"
             className="mx-auto block w-full rounded-xl sm:rounded-2xl object-contain"
@@ -120,6 +121,7 @@ function ProofCard({ code, index }: { code: CodeRow; index: number }) {
         <div className="overflow-hidden rounded-[16px] sm:rounded-[18px] md:rounded-[22px] border border-green-900/40 bg-black/20 p-2.5 sm:p-3">
           <div className="mb-2 text-[11px] sm:text-[12px] md:text-sm font-black text-gray-300">📸 صورة إثبات الربح</div>
           <img
+            loading="lazy"
             src={getImageUrl(code.proof_image_url)!}
             alt={code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
             className="mx-auto block w-full rounded-xl sm:rounded-2xl object-contain"
@@ -215,6 +217,7 @@ export default function WonCodesPage() {
           .from('codes')
           .select('*')
           .in('status', ['won', 'refund'])
+          .lte('day_date', current)
           .gte('day_date', last30Start)
           .order('day_date', { ascending: false })
           .order('won_at', { ascending: false });
