@@ -172,17 +172,24 @@ export default function HomePage() {
     ensureArabicFont();
     let mounted = true;
 
-    async function ensureCurrentDay() {
-      const { data, error } = await supabase.from('app_state').select('*').eq('key', 'current_day').maybeSingle();
-      if (error) throw error;
+    async function getCurrentDay() {
+      const today = new Date().toISOString().split('T')[0];
 
-      if (data?.value) {
+      const { data, error } = await supabase
+        .from('app_state')
+        .select('value')
+        .eq('key', 'current_day')
+        .maybeSingle();
+
+      if (error) {
+        console.error('APP STATE READ ERROR:', error);
+        return today;
+      }
+
+      if (data?.value && /^\d{4}-\d{2}-\d{2}$/.test(data.value)) {
         return data.value as string;
       }
 
-      const today = new Date().toISOString().split('T')[0];
-      const { error: insertError } = await supabase.from('app_state').insert([{ key: 'current_day', value: today }]);
-      if (insertError) throw insertError;
       return today;
     }
 
@@ -190,7 +197,7 @@ export default function HomePage() {
       try {
         setIsLoading(true);
 
-        const currentDay = await ensureCurrentDay();
+        const currentDay = await getCurrentDay();
 
         const [{ data: activeRows, error: activeError }, { data: wonRows, error: wonError }] = await Promise.all([
           supabase
