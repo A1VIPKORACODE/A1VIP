@@ -1,11 +1,10 @@
-// admin.tsx (الإصدار النهائي مع إصلاح التحميل)
 import React, { ChangeEvent, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 const BUCKET = 'codes';
 const TOTAL_STORAGE_BYTES = 1024 * 1024 * 1024;
 const LAST_MOVE_KEY = 'admin_last_move_snapshot';
-const LAST_MOVE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+const LAST_MOVE_TTL = 24 * 60 * 60 * 1000;
 
 type CodeStatus = 'active' | 'won' | 'refund';
 
@@ -166,29 +165,34 @@ export default function AdminPage() {
   const [calendarDay, setCalendarDay] = useState('');
   const [lastMoveAction, setLastMoveAction] = useState<{ ids: string[]; fromDay: string; toDay: string; timestamp: number } | null>(null);
 
-  // Helper to check if user is admin (safe, no throw)
   const isUserAdmin = async (email: string): Promise<boolean> => {
     try {
-      // Get admin email from app_state, fallback to default
       const { data, error } = await supabase
         .from('app_state')
         .select('value')
         .eq('key', 'admin_email')
         .maybeSingle();
-      
       if (!error && data?.value) {
         return email === data.value;
       }
-      // Default admin email (change this to your actual admin email)
       return email === 'admin@a1vip.com';
-    } catch (err) {
-      console.error('isUserAdmin error:', err);
+    } catch {
       return false;
     }
   };
 
+  // Force loading timeout to avoid infinite spinner
+  useEffect(() => {
+    const forceTimeout = setTimeout(() => {
+      setAuthLoading(false);
+    }, 3000);
+
+    return () => clearTimeout(forceTimeout);
+  }, []);
+
   useEffect(() => {
     let mounted = true;
+    let timeoutId: number;
 
     const checkUser = async () => {
       try {
@@ -211,8 +215,15 @@ export default function AdminPage() {
         if (mounted) setUser(null);
       } finally {
         if (mounted) setAuthLoading(false);
+        if (timeoutId) clearTimeout(timeoutId);
       }
     };
+
+    timeoutId = setTimeout(() => {
+      if (mounted) {
+        setAuthLoading(false);
+      }
+    }, 3000) as unknown as number;
 
     checkUser();
 
@@ -237,6 +248,7 @@ export default function AdminPage() {
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      clearTimeout(timeoutId);
     };
   }, []);
 
@@ -249,7 +261,6 @@ export default function AdminPage() {
     if (!raw) return;
     try {
       const parsed = JSON.parse(raw);
-      // Check TTL: if older than 24 hours, remove it
       if (parsed.timestamp && Date.now() - parsed.timestamp > LAST_MOVE_TTL) {
         localStorage.removeItem(LAST_MOVE_KEY);
         setLastMoveAction(null);
@@ -451,7 +462,6 @@ export default function AdminPage() {
       return;
     }
 
-    // Verify admin after login
     const isAdmin = await isUserAdmin(email);
     if (!isAdmin) {
       await supabase.auth.signOut();
