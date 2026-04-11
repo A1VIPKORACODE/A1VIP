@@ -90,7 +90,7 @@ function ProofCard({ code, index }: { code: CodeRow; index: number }) {
           {index}
         </div>
         <div className="rounded-full bg-green-500 px-2.5 sm:px-3 py-1.5 text-[10px] sm:text-xs font-black text-black">
-          {code.status === 'refund' ? '📥 استرداد' : '✅ رابح'}
+          {code.status === 'refund' ? 'ðŸ“¥ Ø§Ø³ØªØ±Ø¯Ø§Ø¯' : 'âœ… Ø±Ø§Ø¨Ø­'}
         </div>
       </div>
 
@@ -102,15 +102,15 @@ function ProofCard({ code, index }: { code: CodeRow; index: number }) {
 
       <div className="mb-3 flex items-center justify-between gap-2">
         <div className="text-[16px] sm:text-[20px] md:text-[24px] font-black text-yellow-400">x{formatOdds(Number(code.odds || 0))}</div>
-        <div className="text-[11px] sm:text-[12px] md:text-sm text-gray-300">نسبة ربح الكود</div>
+        <div className="text-[11px] sm:text-[12px] md:text-sm text-gray-300">Ù†Ø³Ø¨Ø© Ø±Ø¨Ø­ Ø§Ù„ÙƒÙˆØ¯</div>
       </div>
 
       {getImageUrl(code.code_image_url) && (
         <div className="mb-3 overflow-hidden rounded-[16px] sm:rounded-[18px] md:rounded-[22px] border border-green-900/40 bg-black/20 p-2.5 sm:p-3">
-          <div className="mb-2 text-[11px] sm:text-[12px] md:text-sm font-black text-gray-300">📸 صورة الرهان</div>
+          <div className="mb-2 text-[11px] sm:text-[12px] md:text-sm font-black text-gray-300">ðŸ“¸ ØµÙˆØ±Ø© Ø§Ù„Ø±Ù‡Ø§Ù†</div>
           <img
             src={getImageUrl(code.code_image_url)!}
-            alt="صورة الرهان"
+            alt="ØµÙˆØ±Ø© Ø§Ù„Ø±Ù‡Ø§Ù†"
             className="mx-auto block w-full rounded-xl sm:rounded-2xl object-contain"
           />
         </div>
@@ -118,10 +118,10 @@ function ProofCard({ code, index }: { code: CodeRow; index: number }) {
 
       {getImageUrl(code.proof_image_url) && (
         <div className="overflow-hidden rounded-[16px] sm:rounded-[18px] md:rounded-[22px] border border-green-900/40 bg-black/20 p-2.5 sm:p-3">
-          <div className="mb-2 text-[11px] sm:text-[12px] md:text-sm font-black text-gray-300">📸 صورة إثبات الربح</div>
+          <div className="mb-2 text-[11px] sm:text-[12px] md:text-sm font-black text-gray-300">ðŸ“¸ ØµÙˆØ±Ø© Ø¥Ø«Ø¨Ø§Øª Ø§Ù„Ø±Ø¨Ø­</div>
           <img
             src={getImageUrl(code.proof_image_url)!}
-            alt={code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
+            alt={code.status === 'refund' ? 'Ø¥Ø«Ø¨Ø§Øª Ø§Ù„Ø§Ø³ØªØ±Ø¯Ø§Ø¯' : 'Ø¥Ø«Ø¨Ø§Øª Ø§Ù„Ø±Ø¨Ø­'}
             className="mx-auto block w-full rounded-xl sm:rounded-2xl object-contain"
           />
         </div>
@@ -151,31 +151,31 @@ function StatsCard({
       {dayLabel && <div className="mb-3 text-[12px] sm:text-[14px] md:text-[18px] font-bold text-gray-400">{dayLabel}</div>}
 
       <p className="mx-auto max-w-3xl text-[16px] sm:text-[20px] md:text-[28px] font-black leading-[1.7] md:leading-relaxed text-white">
-        لو كنت رميت <span className="text-yellow-400">1000 جنيه</span> بس على أكوادنا المضمونة كانت هاتكون أرباحك دلوقتي
+        Ù„Ùˆ ÙƒÙ†Øª Ø±Ù…ÙŠØª <span className="text-yellow-400">1000 Ø¬Ù†ÙŠÙ‡</span> Ø¨Ø³ Ø¹Ù„Ù‰ Ø£ÙƒÙˆØ§Ø¯Ù†Ø§ Ø§Ù„Ù…Ø¶Ù…ÙˆÙ†Ø© ÙƒØ§Ù†Øª Ù‡Ø§ØªÙƒÙˆÙ† Ø£Ø±Ø¨Ø§Ø­Ùƒ Ø¯Ù„ÙˆÙ‚ØªÙŠ
       </p>
 
       <div className="mt-5 flex items-end justify-center gap-2 sm:gap-3 md:gap-4">
         <span className="text-[26px] sm:text-[34px] md:text-6xl font-black text-green-400 leading-none">{formatMoney(bigAmount)}</span>
-        <span className="text-[20px] sm:text-[24px] md:text-4xl font-black text-green-400 leading-none">جنيه</span>
+        <span className="text-[20px] sm:text-[24px] md:text-4xl font-black text-green-400 leading-none">Ø¬Ù†ÙŠÙ‡</span>
       </div>
 
-      <p className="mt-2 text-[13px] sm:text-[15px] md:text-[18px] font-bold text-green-400">بدل الـ 1000 جنيه!</p>
+      <p className="mt-2 text-[13px] sm:text-[15px] md:text-[18px] font-bold text-green-400">Ø¨Ø¯Ù„ Ø§Ù„Ù€ 1000 Ø¬Ù†ÙŠÙ‡!</p>
 
       <div className="mx-auto mt-6 grid max-w-3xl grid-cols-2 gap-2.5 sm:gap-3 md:gap-4">
         <div className="rounded-[20px] sm:rounded-[22px] md:rounded-[26px] border border-green-900/40 bg-black/40 p-3 sm:p-4 md:p-5">
           <div className="text-[24px] sm:text-[30px] md:text-4xl font-black text-green-400">{totalCodes}</div>
-          <div className="mt-2 sm:mt-3 md:mt-4 text-[12px] sm:text-[14px] md:text-[18px] text-gray-300">مجموع الأكواد</div>
+          <div className="mt-2 sm:mt-3 md:mt-4 text-[12px] sm:text-[14px] md:text-[18px] text-gray-300">Ù…Ø¬Ù…ÙˆØ¹ Ø§Ù„Ø£ÙƒÙˆØ§Ø¯</div>
         </div>
 
         <div className="rounded-[20px] sm:rounded-[22px] md:rounded-[26px] border border-green-900/40 bg-black/40 p-3 sm:p-4 md:p-5">
           <div className="text-[24px] sm:text-[30px] md:text-4xl font-black text-green-400">{wonCodesCount}</div>
-          <div className="mt-2 sm:mt-3 md:mt-4 text-[12px] sm:text-[14px] md:text-[18px] text-gray-300">عدد الأكواد الرابحة</div>
+          <div className="mt-2 sm:mt-3 md:mt-4 text-[12px] sm:text-[14px] md:text-[18px] text-gray-300">Ø¹Ø¯Ø¯ Ø§Ù„Ø£ÙƒÙˆØ§Ø¯ Ø§Ù„Ø±Ø§Ø¨Ø­Ø©</div>
         </div>
       </div>
 
       <div className="mx-auto mt-3 sm:mt-4 md:mt-5 w-[70%] sm:w-[60%] max-w-sm rounded-[20px] sm:rounded-[22px] md:rounded-[26px] border border-yellow-900/30 bg-black/40 p-3 sm:p-4 md:p-5">
         <div className="text-[22px] sm:text-[28px] md:text-4xl font-black text-yellow-400">{formatOdds(totalOdds)}</div>
-        <div className="mt-2 sm:mt-3 md:mt-4 text-[12px] sm:text-[14px] md:text-[18px] text-gray-300">مجموع أرباح الأكواد</div>
+        <div className="mt-2 sm:mt-3 md:mt-4 text-[12px] sm:text-[14px] md:text-[18px] text-gray-300">Ù…Ø¬Ù…ÙˆØ¹ Ø£Ø±Ø¨Ø§Ø­ Ø§Ù„Ø£ÙƒÙˆØ§Ø¯</div>
       </div>
     </section>
   );
@@ -194,15 +194,27 @@ export default function WonCodesPage() {
       try {
         setLoading(true);
 
-        const { data: appState } = await supabase.from('app_state').select('value').eq('key', 'current_day').maybeSingle();
-        const current = appState?.value || new Date().toISOString().split('T')[0];
+        const today = new Date().toISOString().split('T')[0];
+        const { data: appState, error: appStateError } = await supabase
+          .from('app_state')
+          .select('value')
+          .eq('key', 'current_day')
+          .maybeSingle();
+
+        if (appStateError) {
+          console.error('APP STATE READ ERROR:', appStateError);
+        }
+
+        const current =
+          appState?.value && /^\d{4}-\d{2}-\d{2}$/.test(appState.value)
+            ? appState.value
+            : today;
         const last30Start = date30DaysAgo();
 
         const { data, error } = await supabase
           .from('codes')
           .select('*')
           .in('status', ['won', 'refund'])
-          .lte('day_date', current)
           .gte('day_date', last30Start)
           .order('day_date', { ascending: false })
           .order('won_at', { ascending: false });
@@ -271,24 +283,24 @@ export default function WonCodesPage() {
       <section className="relative overflow-hidden rounded-3xl border border-yellow-500/20 bg-gradient-to-br from-[#050a05] via-[#061106] to-[#090f09] px-3 py-7 sm:px-4 sm:py-8 md:p-10 text-center">
         <div className="mb-4 sm:mb-5">
           <div className="inline-flex items-center justify-center rounded-full border border-yellow-500/30 bg-yellow-500/10 px-5 py-2.5 sm:px-6 sm:py-3 text-[16px] sm:text-[20px] md:text-xl font-black text-yellow-300">
-            🏆 الأكواد الرابحة
+            ðŸ† Ø§Ù„Ø£ÙƒÙˆØ§Ø¯ Ø§Ù„Ø±Ø§Ø¨Ø­Ø©
           </div>
         </div>
 
         <h1 className="text-[26px] sm:text-[34px] md:text-5xl font-black leading-[1.15] text-white">
-          سجل <span className="text-green-400 drop-shadow-[0_0_18px_rgba(34,197,94,0.8)]">الانتصارات</span> 🎯
+          Ø³Ø¬Ù„ <span className="text-green-400 drop-shadow-[0_0_18px_rgba(34,197,94,0.8)]">Ø§Ù„Ø§Ù†ØªØµØ§Ø±Ø§Øª</span> ðŸŽ¯
         </h1>
 
         <div className="mt-4 sm:mt-5 flex items-center justify-center gap-2 sm:gap-3">
           <div className="h-px w-10 sm:w-14 md:w-24 bg-green-700/80" />
-          <p className="text-[13px] sm:text-[16px] md:text-[18px] font-bold text-green-300">⚽ احصائيات الأكواد الرابحة ⚽</p>
+          <p className="text-[13px] sm:text-[16px] md:text-[18px] font-bold text-green-300">âš½ Ø§Ø­ØµØ§Ø¦ÙŠØ§Øª Ø§Ù„Ø£ÙƒÙˆØ§Ø¯ Ø§Ù„Ø±Ø§Ø¨Ø­Ø© âš½</p>
           <div className="h-px w-10 sm:w-14 md:w-24 bg-green-700/80" />
         </div>
       </section>
 
       {yesterdayCodes.length > 0 && previousWinningDay && (
         <StatsCard
-          title="📅 إحصائيات أكواد امبارح"
+          title="ðŸ“… Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª Ø£ÙƒÙˆØ§Ø¯ Ø§Ù…Ø¨Ø§Ø±Ø­"
           dayLabel={formatDateArabic(previousWinningDay)}
           bigAmount={yesterdayStats.profit1000}
           totalCodes={yesterdayStats.totalCodes}
@@ -298,7 +310,7 @@ export default function WonCodesPage() {
       )}
 
       <StatsCard
-        title="📊 إحصائيات آخر 30 يوم"
+        title="ðŸ“Š Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª Ø¢Ø®Ø± 30 ÙŠÙˆÙ…"
         bigAmount={last30Stats.profit1000}
         totalCodes={last30Stats.totalCodes}
         wonCodesCount={last30Stats.wonCodesCount}
@@ -307,28 +319,28 @@ export default function WonCodesPage() {
 
       <section className="rounded-[20px] sm:rounded-[24px] md:rounded-[28px] border border-yellow-500/25 bg-gradient-to-br from-yellow-500/10 to-yellow-700/10 px-3 py-4 sm:px-4 sm:py-5 md:px-6 md:py-7 text-center shadow-[0_0_32px_rgba(234,179,8,0.12)]">
         <h2 className="text-[18px] sm:text-[22px] md:text-[28px] font-black leading-[1.8] md:leading-relaxed text-white">
-          🔥 انتهز الفرصة الآن واستخدم أكوادنا المضمونة
+          ðŸ”¥ Ø§Ù†ØªÙ‡Ø² Ø§Ù„ÙØ±ØµØ© Ø§Ù„Ø¢Ù† ÙˆØ§Ø³ØªØ®Ø¯Ù… Ø£ÙƒÙˆØ§Ø¯Ù†Ø§ Ø§Ù„Ù…Ø¶Ù…ÙˆÙ†Ø©
         </h2>
 
         <p className="mx-auto mt-5 sm:mt-6 max-w-3xl text-[15px] sm:text-[18px] md:text-[22px] leading-[1.9] text-gray-200">
-          حتى تكون أرباحك الشهر القادم مضاعفات رأس مالك وانت مطمئن 💪
+          Ø­ØªÙ‰ ØªÙƒÙˆÙ† Ø£Ø±Ø¨Ø§Ø­Ùƒ Ø§Ù„Ø´Ù‡Ø± Ø§Ù„Ù‚Ø§Ø¯Ù… Ù…Ø¶Ø§Ø¹ÙØ§Øª Ø±Ø£Ø³ Ù…Ø§Ù„Ùƒ ÙˆØ§Ù†Øª Ù…Ø·Ù…Ø¦Ù† ðŸ’ª
         </p>
 
         <div className="mx-auto mt-6 sm:mt-7 max-w-3xl rounded-[18px] sm:rounded-[20px] md:rounded-[24px] border border-green-900/40 bg-black/35 p-3 sm:p-4 md:p-5 text-right">
-          <p className="text-[15px] sm:text-[17px] md:text-[20px] font-black leading-[1.9] text-white">🎲 عشان الأكواد تشتغل معاك لازم 🔤</p>
+          <p className="text-[15px] sm:text-[17px] md:text-[20px] font-black leading-[1.9] text-white">ðŸŽ² Ø¹Ø´Ø§Ù† Ø§Ù„Ø£ÙƒÙˆØ§Ø¯ ØªØ´ØªØºÙ„ Ù…Ø¹Ø§Ùƒ Ù„Ø§Ø²Ù… ðŸ”¤</p>
           <p className="mt-3 sm:mt-4 text-[15px] sm:text-[17px] md:text-[20px] font-black leading-[2] text-white">
-            1️⃣ تستخدمها في تطبيق <span className="text-gray-200">MELBET</span>
+            1ï¸âƒ£ ØªØ³ØªØ®Ø¯Ù…Ù‡Ø§ ÙÙŠ ØªØ·Ø¨ÙŠÙ‚ <span className="text-gray-200">MELBET</span>
           </p>
           <p className="mt-2 sm:mt-3 text-[15px] sm:text-[17px] md:text-[20px] font-black leading-[2] text-white">
-            2️⃣ وتكون مسجل ببروموكود <span className="text-yellow-400">A1VIP</span>
+            2ï¸âƒ£ ÙˆØªÙƒÙˆÙ† Ù…Ø³Ø¬Ù„ Ø¨Ø¨Ø±ÙˆÙ…ÙˆÙƒÙˆØ¯ <span className="text-yellow-400">A1VIP</span>
           </p>
 
           <div className="my-4 sm:my-5 h-px bg-green-900/40" />
 
-          <p className="text-[15px] sm:text-[17px] md:text-[20px] font-black leading-[1.9] text-white">🗓 وده شرح:</p>
-          <p className="mt-3 sm:mt-4 text-[15px] sm:text-[17px] md:text-[20px] leading-[2] text-gray-300">📌 طريقة تنزيل تطبيق MELBET</p>
+          <p className="text-[15px] sm:text-[17px] md:text-[20px] font-black leading-[1.9] text-white">ðŸ—“ ÙˆØ¯Ù‡ Ø´Ø±Ø­:</p>
+          <p className="mt-3 sm:mt-4 text-[15px] sm:text-[17px] md:text-[20px] leading-[2] text-gray-300">ðŸ“Œ Ø·Ø±ÙŠÙ‚Ø© ØªÙ†Ø²ÙŠÙ„ ØªØ·Ø¨ÙŠÙ‚ MELBET</p>
           <p className="mt-1 sm:mt-2 text-[15px] sm:text-[17px] md:text-[20px] leading-[2] text-gray-300">
-            📌 والتسجيل ببروموكود <span className="text-yellow-400 font-black">A1VIP</span> ⬇️
+            ðŸ“Œ ÙˆØ§Ù„ØªØ³Ø¬ÙŠÙ„ Ø¨Ø¨Ø±ÙˆÙ…ÙˆÙƒÙˆØ¯ <span className="text-yellow-400 font-black">A1VIP</span> â¬‡ï¸
           </p>
         </div>
 
@@ -338,32 +350,32 @@ export default function WonCodesPage() {
           rel="noreferrer"
           className="mt-7 sm:mt-8 inline-flex w-full max-w-3xl items-center justify-center rounded-[18px] sm:rounded-[20px] md:rounded-[24px] bg-yellow-500 px-3 py-4 sm:px-4 sm:py-5 text-[15px] sm:text-[17px] md:text-[20px] font-black text-black shadow-[0_0_26px_rgba(234,179,8,0.45)] transition-all hover:bg-yellow-400"
         >
-          ← اضغط هنا للتحويل للشرح اضغط هنا
+          â† Ø§Ø¶ØºØ· Ù‡Ù†Ø§ Ù„Ù„ØªØ­ÙˆÙŠÙ„ Ù„Ù„Ø´Ø±Ø­ Ø§Ø¶ØºØ· Ù‡Ù†Ø§
         </a>
       </section>
 
       <section className="space-y-6 sm:space-y-8">
         <div className="mx-auto w-full max-w-5xl rounded-[20px] sm:rounded-[24px] md:rounded-[28px] border border-yellow-400/55 bg-gradient-to-r from-yellow-500/18 via-yellow-400/16 to-yellow-500/18 px-4 py-5 sm:px-5 sm:py-7 text-center shadow-[0_0_34px_rgba(234,179,8,0.22)]">
           <h2 className="text-[18px] sm:text-[22px] md:text-[28px] font-black leading-[1.6] text-yellow-300">
-            💸 إثبات كل الاكواد الرابحة 💸
+            ðŸ’¸ Ø¥Ø«Ø¨Ø§Øª ÙƒÙ„ Ø§Ù„Ø§ÙƒÙˆØ§Ø¯ Ø§Ù„Ø±Ø§Ø¨Ø­Ø© ðŸ’¸
           </h2>
-          <p className="mt-2 sm:mt-4 text-[16px] sm:text-[20px] md:text-[28px] font-black leading-[1.5] text-yellow-200">⚽ لآخر 30 يوم ⚽</p>
+          <p className="mt-2 sm:mt-4 text-[16px] sm:text-[20px] md:text-[28px] font-black leading-[1.5] text-yellow-200">âš½ Ù„Ø¢Ø®Ø± 30 ÙŠÙˆÙ… âš½</p>
         </div>
 
         {loading ? (
           <div className="rounded-3xl border border-green-900/40 bg-black/30 p-10 text-center text-2xl text-gray-400">
-            جاري التحميل...
+            Ø¬Ø§Ø±ÙŠ Ø§Ù„ØªØ­Ù…ÙŠÙ„...
           </div>
         ) : last30Codes.length === 0 ? (
           <div className="rounded-3xl border border-green-900/40 bg-black/30 p-10 text-center text-2xl text-gray-400">
-            لا توجد إثباتات حتى الآن
+            Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¥Ø«Ø¨Ø§ØªØ§Øª Ø­ØªÙ‰ Ø§Ù„Ø¢Ù†
           </div>
         ) : (
           Object.entries(groupedCodes).map(([day, items]) => (
             <div key={day} className="space-y-4 sm:space-y-6">
               <div className="text-center">
                 <h3 className="text-[18px] sm:text-[22px] md:text-[28px] font-black text-white">{formatDateArabic(day)}</h3>
-                <p className="mt-1.5 sm:mt-2 text-[13px] sm:text-[15px] md:text-[18px] text-gray-400">{items.length} كود رابح</p>
+                <p className="mt-1.5 sm:mt-2 text-[13px] sm:text-[15px] md:text-[18px] text-gray-400">{items.length} ÙƒÙˆØ¯ Ø±Ø§Ø¨Ø­</p>
               </div>
 
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3 md:gap-4">
