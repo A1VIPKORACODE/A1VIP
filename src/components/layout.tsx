@@ -25,7 +25,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-16">
           <Link href="/">
             <div className="flex items-center gap-2 cursor-pointer group">
-              <div className="w-10 h-10 rounded-full overflow-hidden border border-green-500/40 shadow-[0_0_15px_rgba(34,197,94,0.5)]"><img src="/favicon.png" className="w-full h-full object-cover" /></div>
+              <div className="w-10 h-10 rounded-full overflow-hidden border border-green-500/40 shadow-[0_0_15px_rgba(34,197,94,0.5)]"><img loading="lazy" src="/favicon.png" alt="A1VIP logo" className="w-full h-full object-cover" /></div>
               <div>
                 <div className="font-black text-lg leading-none text-white tracking-tight">A1VIP <span className="text-green-400">KORA</span></div>
                 <div className="text-[10px] text-yellow-400 font-bold tracking-widest leading-none">CODE</div>
