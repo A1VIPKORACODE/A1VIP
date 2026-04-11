@@ -1,7 +1,6 @@
 import React, { ChangeEvent, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
-const ADMIN_PASSWORD = 'AbanoubSamirRANDAHANY907&ANGLIabanoub907@#$';
 const STORAGE_KEY = 'admin_token_expires';
 const BUCKET = 'codes';
 const TOTAL_STORAGE_BYTES = 1024 * 1024 * 1024;
@@ -662,14 +661,14 @@ export default function AdminPage() {
 
           <input
             type="email"
-          placeholder="اكتب الإيميل"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="mb-4 w-full rounded-2xl border border-emerald-500/20 bg-black/35 px-4 py-3 text-[16px] text-white outline-none"
-        />
+            placeholder="اكتب الإيميل"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="mb-4 w-full rounded-[16px] sm:rounded-[18px] border border-emerald-500/20 bg-black/35 px-3 py-2.5 text-[14px] sm:text-[15px] md:text-[15px] text-white outline-none"
+          />
 
-        <input
-          type="password"
+          <input
+            type="password"
             placeholder="اكتب كلمة السر"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
