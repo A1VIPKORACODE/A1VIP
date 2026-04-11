@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 const BUCKET = 'codes';
 const TOTAL_STORAGE_BYTES = 1024 * 1024 * 1024;
 const LAST_MOVE_KEY = 'admin_last_move_snapshot';
+const LAST_MOVE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
 type CodeStatus = 'active' | 'won' | 'refund';
 
@@ -51,6 +52,13 @@ function addOneDay(dateStr: string) {
   const [year, month, day] = dateStr.split('-').map(Number);
   const utcDate = new Date(Date.UTC(year, month - 1, day));
   utcDate.setUTCDate(utcDate.getUTCDate() + 1);
+  return utcDate.toISOString().slice(0, 10);
+}
+
+function subtractOneDay(dateStr: string) {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const utcDate = new Date(Date.UTC(year, month - 1, day));
+  utcDate.setUTCDate(utcDate.getUTCDate() - 1);
   return utcDate.toISOString().slice(0, 10);
 }
 
@@ -155,21 +163,60 @@ export default function AdminPage() {
   const [selectedCodeIds, setSelectedCodeIds] = useState<string[]>([]);
   const [moveMode, setMoveMode] = useState<'all' | 'selected'>('all');
   const [calendarDay, setCalendarDay] = useState('');
-  const [lastMoveAction, setLastMoveAction] = useState<{ ids: string[]; fromDay: string; toDay: string } | null>(null);
+  const [lastMoveAction, setLastMoveAction] = useState<{ ids: string[]; fromDay: string; toDay: string; timestamp: number } | null>(null);
+
+  // Helper to check if user is admin
+  const isUserAdmin = async (email: string): Promise<boolean> => {
+    // Get admin email from app_state, fallback to default
+    const { data, error } = await supabase
+      .from('app_state')
+      .select('value')
+      .eq('key', 'admin_email')
+      .maybeSingle();
+    
+    if (!error && data?.value) {
+      return email === data.value;
+    }
+    // Default admin email (change this to your actual admin email)
+    return email === 'admin@a1vip.com';
+  };
 
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       if (!mounted) return;
-      setUser(data.user ?? null);
+      const currentUser = data.user ?? null;
+      if (currentUser) {
+        const isAdmin = await isUserAdmin(currentUser.email || '');
+        if (!isAdmin) {
+          // Sign out non-admin users immediately
+          await supabase.auth.signOut();
+          setUser(null);
+        } else {
+          setUser(currentUser);
+        }
+      } else {
+        setUser(null);
+      }
       setAuthLoading(false);
     });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const newUser = session?.user ?? null;
+      if (newUser) {
+        const isAdmin = await isUserAdmin(newUser.email || '');
+        if (!isAdmin) {
+          await supabase.auth.signOut();
+          setUser(null);
+        } else {
+          setUser(newUser);
+        }
+      } else {
+        setUser(null);
+      }
       setAuthLoading(false);
     });
 
@@ -188,7 +235,11 @@ export default function AdminPage() {
     if (!raw) return;
     try {
       const parsed = JSON.parse(raw);
-      if (parsed?.ids?.length && parsed?.fromDay && parsed?.toDay) {
+      // Check TTL: if older than 24 hours, remove it
+      if (parsed.timestamp && Date.now() - parsed.timestamp > LAST_MOVE_TTL) {
+        localStorage.removeItem(LAST_MOVE_KEY);
+        setLastMoveAction(null);
+      } else if (parsed?.ids?.length && parsed?.fromDay && parsed?.toDay) {
         setLastMoveAction(parsed);
       }
     } catch (_) {}
@@ -285,6 +336,7 @@ export default function AdminPage() {
       .from('codes')
       .select('*')
       .in('status', ['won', 'refund'])
+      .not('won_at', 'is', null)
       .lt('won_at', cutoffStr);
 
     if (error) return;
@@ -375,13 +427,21 @@ export default function AdminPage() {
       return;
     }
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password: loginPassword,
     });
 
     if (error) {
       setMessage('بيانات الدخول غير صحيحة');
+      return;
+    }
+
+    // Verify admin after login
+    const isAdmin = await isUserAdmin(email);
+    if (!isAdmin) {
+      await supabase.auth.signOut();
+      setMessage('ليس لديك صلاحية الدخول إلى لوحة الإدارة');
       return;
     }
 
@@ -696,7 +756,7 @@ export default function AdminPage() {
   }
 
   function rememberLastMove(ids: string[], fromDay: string, toDay: string) {
-    const snapshot = { ids, fromDay, toDay };
+    const snapshot = { ids, fromDay, toDay, timestamp: Date.now() };
     setLastMoveAction(snapshot);
     localStorage.setItem(LAST_MOVE_KEY, JSON.stringify(snapshot));
   }
@@ -706,6 +766,13 @@ export default function AdminPage() {
       setMessage('');
       if (!currentDay || targetDay === currentDay) {
         setMessage('اختر يوم مختلف');
+        return;
+      }
+
+      // 🔧 FIX: Prevent moving codes to future days (beyond today)
+      const today = new Date().toISOString().split('T')[0];
+      if (targetDay > today) {
+        setMessage('لا يمكن نقل الأكواد إلى يوم مستقبلي');
         return;
       }
 
@@ -790,6 +857,12 @@ export default function AdminPage() {
         setMessage('اختر يوم من التقويم');
         return;
       }
+      // 🔧 FIX: Prevent moving to future days via calendar
+      const today = new Date().toISOString().split('T')[0];
+      if (calendarDay > today) {
+        setMessage('لا يمكن الانتقال إلى يوم مستقبلي');
+        return;
+      }
       await supabase
         .from('app_state')
         .upsert([{ key: 'current_day', value: calendarDay }], { onConflict: 'key' });
@@ -804,11 +877,18 @@ export default function AdminPage() {
   }
 
   async function goPreviousDayQuick() {
-    await moveCodesToDay(subtractOneDay(currentDay));
+    const prevDay = subtractOneDay(currentDay);
+    await moveCodesToDay(prevDay);
   }
 
   async function goNextDayQuick() {
-    await moveCodesToDay(addOneDay(currentDay));
+    const nextDay = addOneDay(currentDay);
+    const today = new Date().toISOString().split('T')[0];
+    if (nextDay > today) {
+      setMessage('لا يمكن الانتقال إلى يوم مستقبلي');
+      return;
+    }
+    await moveCodesToDay(nextDay);
   }
 
 
