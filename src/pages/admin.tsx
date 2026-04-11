@@ -329,9 +329,6 @@ export default function AdminPage() {
       setLoading(true);
       setMessage('');
 
-      await cleanupOldWonCodes();
-      await cleanupStorageOlderThan30Days();
-
       const day = await ensureCurrentDay();
       setCurrentDay(day);
 
