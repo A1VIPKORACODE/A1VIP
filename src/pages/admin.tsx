@@ -1,10 +1,9 @@
 import React, { ChangeEvent, useEffect, useMemo, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, STORAGE_BUCKET, getLocalDateString, getStoragePublicUrl, normalizeStoragePath, isAdminUser } from '../lib/supabase';
 
-const BUCKET = 'codes';
+const BUCKET = STORAGE_BUCKET;
 const TOTAL_STORAGE_BYTES = 1024 * 1024 * 1024;
 const LAST_MOVE_KEY = 'admin_last_move_snapshot';
-const LAST_MOVE_TTL = 24 * 60 * 60 * 1000;
 
 type CodeStatus = 'active' | 'won' | 'refund';
 
@@ -55,19 +54,8 @@ function addOneDay(dateStr: string) {
   return utcDate.toISOString().slice(0, 10);
 }
 
-function subtractOneDay(dateStr: string) {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const utcDate = new Date(Date.UTC(year, month - 1, day));
-  utcDate.setUTCDate(utcDate.getUTCDate() - 1);
-  return utcDate.toISOString().slice(0, 10);
-}
-
 function getPublicUrl(path?: string | null) {
-  if (!path) return null;
-  if (path.startsWith('http')) return path;
-  const clean = path.replace(/^\/+/, '').replace(/^codes\//, '');
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(clean);
-  return data.publicUrl;
+  return getStoragePublicUrl(path);
 }
 
 function fileName(prefix: string, file: File) {
@@ -88,10 +76,7 @@ async function uploadImage(file: File, prefix: string) {
 
 async function removeImage(path?: string | null) {
   if (!path) return;
-  const clean = path
-    .replace(/^https?:\/\/[^/]+\/storage\/v1\/object\/public\/codes\//, '')
-    .replace(/^\/+/, '')
-    .replace(/^codes\//, '');
+  const clean = normalizeStoragePath(path);
   if (!clean) return;
   await supabase.storage.from(BUCKET).remove([clean]);
 }
@@ -141,6 +126,7 @@ function SectionCard({ children }: { children: React.ReactNode }) {
 export default function AdminPage() {
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState('');
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [message, setMessage] = useState('');
@@ -163,92 +149,31 @@ export default function AdminPage() {
   const [selectedCodeIds, setSelectedCodeIds] = useState<string[]>([]);
   const [moveMode, setMoveMode] = useState<'all' | 'selected'>('all');
   const [calendarDay, setCalendarDay] = useState('');
-  const [lastMoveAction, setLastMoveAction] = useState<{ ids: string[]; fromDay: string; toDay: string; timestamp: number } | null>(null);
-
-  const isUserAdmin = async (email: string): Promise<boolean> => {
-    try {
-      const { data, error } = await supabase
-        .from('app_state')
-        .select('value')
-        .eq('key', 'admin_email')
-        .maybeSingle();
-      if (!error && data?.value) {
-        return email === data.value;
-      }
-      return email === 'admin@a1vip.com';
-    } catch {
-      return false;
-    }
-  };
-
-  // Force loading timeout to avoid infinite spinner
-  useEffect(() => {
-    const forceTimeout = setTimeout(() => {
-      setAuthLoading(false);
-    }, 3000);
-
-    return () => clearTimeout(forceTimeout);
-  }, []);
+  const [lastMoveAction, setLastMoveAction] = useState<{ ids: string[]; fromDay: string; toDay: string } | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    let timeoutId: number;
 
-    const checkUser = async () => {
-      try {
-        const { data } = await supabase.auth.getUser();
-        if (!mounted) return;
-        const currentUser = data.user ?? null;
-        if (currentUser) {
-          const isAdmin = await isUserAdmin(currentUser.email || '');
-          if (!isAdmin) {
-            await supabase.auth.signOut();
-            setUser(null);
-          } else {
-            setUser(currentUser);
-          }
-        } else {
-          setUser(null);
-        }
-      } catch (err) {
-        console.error('Error checking user:', err);
-        if (mounted) setUser(null);
-      } finally {
-        if (mounted) setAuthLoading(false);
-        if (timeoutId) clearTimeout(timeoutId);
-      }
-    };
-
-    timeoutId = setTimeout(() => {
-      if (mounted) {
-        setAuthLoading(false);
-      }
-    }, 3000) as unknown as number;
-
-    checkUser();
+    supabase.auth.getUser().then(({ data }) => {
+      if (!mounted) return;
+      const nextUser = isAdminUser(data.user) ? data.user : null;
+      setUser(nextUser);
+      setAuthError(data.user && !nextUser ? 'هذا الحساب ليس لديه صلاحية الأدمن' : '');
+      setAuthLoading(false);
+    });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const newUser = session?.user ?? null;
-      if (newUser) {
-        const isAdmin = await isUserAdmin(newUser.email || '');
-        if (!isAdmin) {
-          await supabase.auth.signOut();
-          setUser(null);
-        } else {
-          setUser(newUser);
-        }
-      } else {
-        setUser(null);
-      }
-      if (mounted) setAuthLoading(false);
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const nextUser = isAdminUser(session?.user) ? session?.user : null;
+      setUser(nextUser);
+      setAuthError(session?.user && !nextUser ? 'هذا الحساب ليس لديه صلاحية الأدمن' : '');
+      setAuthLoading(false);
     });
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
-      clearTimeout(timeoutId);
     };
   }, []);
 
@@ -261,10 +186,7 @@ export default function AdminPage() {
     if (!raw) return;
     try {
       const parsed = JSON.parse(raw);
-      if (parsed.timestamp && Date.now() - parsed.timestamp > LAST_MOVE_TTL) {
-        localStorage.removeItem(LAST_MOVE_KEY);
-        setLastMoveAction(null);
-      } else if (parsed?.ids?.length && parsed?.fromDay && parsed?.toDay) {
+      if (parsed?.ids?.length && parsed?.fromDay && parsed?.toDay) {
         setLastMoveAction(parsed);
       }
     } catch (_) {}
@@ -288,7 +210,7 @@ export default function AdminPage() {
       return data.value as string;
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateString();
 
     if (data?.key === 'current_day') {
       const { error: updateError } = await supabase.from('app_state').update({ value: today }).eq('key', 'current_day');
@@ -352,45 +274,6 @@ export default function AdminPage() {
     if (upError) throw upError;
   }
 
-  async function cleanupOldWonCodes() {
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 30);
-    const cutoffStr = cutoff.toISOString();
-
-    const { data, error } = await supabase
-      .from('codes')
-      .select('*')
-      .in('status', ['won', 'refund'])
-      .not('won_at', 'is', null)
-      .lt('won_at', cutoffStr);
-
-    if (error) return;
-
-    for (const row of data || []) {
-      await removeImage(row.code_image_url);
-      await removeImage(row.proof_image_url);
-      await supabase.from('codes').delete().eq('id', row.id);
-    }
-  }
-
-  async function cleanupStorageOlderThan30Days() {
-    const files = await listAllFiles('');
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 30);
-
-    const toDelete = files
-      .filter((file) => {
-        const createdAt = file.created_at || file.updated_at;
-        if (!createdAt) return false;
-        return new Date(createdAt) < cutoff;
-      })
-      .map((file) => file.fullPath)
-      .filter(Boolean);
-
-    if (toDelete.length > 0) {
-      await supabase.storage.from(BUCKET).remove(toDelete);
-    }
-  }
 
   async function refreshStorageStats() {
     try {
@@ -405,9 +288,6 @@ export default function AdminPage() {
     try {
       setLoading(true);
       setMessage('');
-
-      await cleanupOldWonCodes();
-      await cleanupStorageOlderThan30Days();
 
       const day = await ensureCurrentDay();
       setCurrentDay(day);
@@ -462,13 +342,14 @@ export default function AdminPage() {
       return;
     }
 
-    const isAdmin = await isUserAdmin(email);
-    if (!isAdmin) {
+    if (!isAdminUser(data.user)) {
       await supabase.auth.signOut();
-      setMessage('ليس لديك صلاحية الدخول إلى لوحة الإدارة');
+      setAuthError('هذا الحساب ليس لديه صلاحية الأدمن');
+      setMessage('تم تسجيل الدخول لكن الحساب لا يملك role = admin');
       return;
     }
 
+    setAuthError('');
     setLoginPassword('');
   };
 
@@ -478,6 +359,7 @@ export default function AdminPage() {
     setLoginPassword('');
     setLoginEmail('');
     setMessage('');
+    setAuthError('');
   };
 
   const resetForm = () => {
@@ -780,7 +662,7 @@ export default function AdminPage() {
   }
 
   function rememberLastMove(ids: string[], fromDay: string, toDay: string) {
-    const snapshot = { ids, fromDay, toDay, timestamp: Date.now() };
+    const snapshot = { ids, fromDay, toDay };
     setLastMoveAction(snapshot);
     localStorage.setItem(LAST_MOVE_KEY, JSON.stringify(snapshot));
   }
@@ -790,12 +672,6 @@ export default function AdminPage() {
       setMessage('');
       if (!currentDay || targetDay === currentDay) {
         setMessage('اختر يوم مختلف');
-        return;
-      }
-
-      const today = new Date().toISOString().split('T')[0];
-      if (targetDay > today) {
-        setMessage('لا يمكن نقل الأكواد إلى يوم مستقبلي');
         return;
       }
 
@@ -880,11 +756,6 @@ export default function AdminPage() {
         setMessage('اختر يوم من التقويم');
         return;
       }
-      const today = new Date().toISOString().split('T')[0];
-      if (calendarDay > today) {
-        setMessage('لا يمكن الانتقال إلى يوم مستقبلي');
-        return;
-      }
       await supabase
         .from('app_state')
         .upsert([{ key: 'current_day', value: calendarDay }], { onConflict: 'key' });
@@ -899,18 +770,11 @@ export default function AdminPage() {
   }
 
   async function goPreviousDayQuick() {
-    const prevDay = subtractOneDay(currentDay);
-    await moveCodesToDay(prevDay);
+    await moveCodesToDay(subtractOneDay(currentDay));
   }
 
   async function goNextDayQuick() {
-    const nextDay = addOneDay(currentDay);
-    const today = new Date().toISOString().split('T')[0];
-    if (nextDay > today) {
-      setMessage('لا يمكن الانتقال إلى يوم مستقبلي');
-      return;
-    }
-    await moveCodesToDay(nextDay);
+    await moveCodesToDay(addOneDay(currentDay));
   }
 
 
@@ -922,7 +786,7 @@ export default function AdminPage() {
     };
   }, [dailyStats]);
 
-  const usedPercent = Math.min(100, (storageStats.usedBytes / storageStats.totalBytes) * 100);
+  const usedPercent = storageStats.totalBytes > 0 ? Math.min(100, (storageStats.usedBytes / storageStats.totalBytes) * 100) : 0;
 
   if (authLoading) {
     return (
@@ -961,7 +825,7 @@ export default function AdminPage() {
             دخول
           </button>
 
-          {message && <p className="mt-4 text-center text-[13px] sm:text-[14px] md:text-[14px] font-bold text-red-400">{message}</p>}
+          {(message || authError) && <p className="mt-4 text-center text-[13px] sm:text-[14px] md:text-[14px] font-bold text-red-400">{authError || message}</p>}
         </form>
       </div>
     );
@@ -1052,7 +916,7 @@ export default function AdminPage() {
                 {betImagePreview && (
                   <div className="mt-4 overflow-hidden rounded-[18px] sm:rounded-[18px] sm:rounded-[20px] border border-emerald-500/15 bg-black/25 p-3 sm:p-4">
                     <p className="mb-3 text-[13px] sm:text-[14px] md:text-[15px] font-bold text-emerald-100/80">معاينة الصورة</p>
-                    <img src={betImagePreview} alt="معاينة صورة الكود" className="mx-auto block max-h-[260px] md:max-h-[380px] w-full rounded-[16px] sm:rounded-[18px] object-contain" />
+                    <img src={betImagePreview} alt="معاينة صورة الكود" className="mx-auto block max-h-[260px] md:max-h-[380px] w-full rounded-[16px] sm:rounded-[18px] object-contain" loading="lazy" decoding="async" />
                   </div>
                 )}
               </div>
