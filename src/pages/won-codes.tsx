@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, getLocalDateString, getStoragePublicUrl } from '../lib/supabase';
 
 const AR_LATN_LOCALE = 'ar-EG-u-nu-latn';
 
@@ -25,25 +25,6 @@ function ensureArabicFont() {
   document.head.appendChild(link);
 }
 
-
-function normalizeStoragePath(path?: string | null) {
-  if (!path) return null;
-  let clean = String(path).trim();
-  clean = clean.replace(/^https?:\/\/[^/]+\/storage\/v1\/object\/public\/codes\//, '');
-  clean = clean.replace(/^\/+/, '');
-  clean = clean.replace(/^codes\//, '');
-  return clean || null;
-}
-
-function getImageUrl(path?: string | null) {
-  if (!path) return null;
-  if (path.startsWith('http')) return path;
-  const clean = normalizeStoragePath(path);
-  if (!clean) return null;
-  const { data } = supabase.storage.from('codes').getPublicUrl(clean);
-  return data.publicUrl;
-}
-
 function formatDateArabic(dateStr: string) {
   return new Date(`${dateStr}T00:00:00`).toLocaleDateString(AR_LATN_LOCALE, {
     weekday: 'long',
@@ -64,7 +45,7 @@ function formatOdds(value: number) {
 function date30DaysAgo() {
   const d = new Date();
   d.setDate(d.getDate() - 30);
-  return d.toISOString().split('T')[0];
+  return getLocalDateString(d);
 }
 
 type CodeRow = {
@@ -83,6 +64,9 @@ type CodeRow = {
 };
 
 function ProofCard({ code, index }: { code: CodeRow; index: number }) {
+  const betImageUrl = getStoragePublicUrl(code.code_image_url);
+  const proofImageUrl = getStoragePublicUrl(code.proof_image_url);
+
   return (
     <div className="rounded-[18px] sm:rounded-[20px] md:rounded-[24px] border border-green-900/50 bg-[radial-gradient(circle_at_top,#0d2210,#071107)] p-2.5 sm:p-3 md:p-4 shadow-[0_0_24px_rgba(0,255,120,0.08)]">
       <div className="mb-3 flex items-center justify-between gap-2">
@@ -105,24 +89,22 @@ function ProofCard({ code, index }: { code: CodeRow; index: number }) {
         <div className="text-[11px] sm:text-[12px] md:text-sm text-gray-300">نسبة ربح الكود</div>
       </div>
 
-      {getImageUrl(code.code_image_url) && (
+      {betImageUrl && (
         <div className="mb-3 overflow-hidden rounded-[16px] sm:rounded-[18px] md:rounded-[22px] border border-green-900/40 bg-black/20 p-2.5 sm:p-3">
           <div className="mb-2 text-[11px] sm:text-[12px] md:text-sm font-black text-gray-300">📸 صورة الرهان</div>
-          <img
-            src={getImageUrl(code.code_image_url)!}
-            alt="صورة الرهان"
-            className="mx-auto block w-full rounded-xl sm:rounded-2xl object-contain"
-          />
+          <img src={betImageUrl} alt="صورة الرهان" className="mx-auto block w-full rounded-xl sm:rounded-2xl object-contain" loading="lazy" decoding="async" />
         </div>
       )}
 
-      {getImageUrl(code.proof_image_url) && (
+      {proofImageUrl && (
         <div className="overflow-hidden rounded-[16px] sm:rounded-[18px] md:rounded-[22px] border border-green-900/40 bg-black/20 p-2.5 sm:p-3">
           <div className="mb-2 text-[11px] sm:text-[12px] md:text-sm font-black text-gray-300">📸 صورة إثبات الربح</div>
           <img
-            src={getImageUrl(code.proof_image_url)!}
+            src={proofImageUrl}
             alt={code.status === 'refund' ? 'إثبات الاسترداد' : 'إثبات الربح'}
             className="mx-auto block w-full rounded-xl sm:rounded-2xl object-contain"
+            loading="lazy"
+            decoding="async"
           />
         </div>
       )}
@@ -194,7 +176,7 @@ export default function WonCodesPage() {
       try {
         setLoading(true);
 
-        const today = new Date().toISOString().split('T')[0];
+        const today = getLocalDateString();
         const { data: appState, error: appStateError } = await supabase
           .from('app_state')
           .select('value')
@@ -211,13 +193,12 @@ export default function WonCodesPage() {
             : today;
         const last30Start = date30DaysAgo();
 
-        // 🔧 FIX: Only show codes up to current_day (no future days)
         const { data, error } = await supabase
           .from('codes')
           .select('*')
           .in('status', ['won', 'refund'])
           .gte('day_date', last30Start)
-          .lte('day_date', current)   // ✅ إضافة شرط عدم عرض الأكواد من أيام مستقبلية
+          .lte('day_date', current)
           .order('day_date', { ascending: false })
           .order('won_at', { ascending: false });
 
@@ -253,140 +234,72 @@ export default function WonCodesPage() {
     return wonCodes.filter((c) => c.day_date === previousWinningDay);
   }, [wonCodes, previousWinningDay]);
 
-  const last30Codes = wonCodes;
+  const last30Stats = useMemo(() => {
+    const totalCodes = wonCodes.length;
+    const wonCodesCount = wonCodes.length;
+    const totalOdds = wonCodes.reduce((sum, code) => sum + Number(code.odds || 0), 0);
+    return {
+      totalCodes,
+      wonCodesCount,
+      totalOdds,
+      bigAmount: Math.round(totalOdds * 1000),
+    };
+  }, [wonCodes]);
 
-  const groupedCodes = useMemo(() => {
-    const grouped: Record<string, CodeRow[]> = {};
-    for (const code of last30Codes) {
-      if (!grouped[code.day_date]) grouped[code.day_date] = [];
-      grouped[code.day_date].push(code);
-    }
-    return grouped;
-  }, [last30Codes]);
-
-  const yesterdayStats = useMemo(() => {
+  const previousDayStats = useMemo(() => {
     const totalCodes = yesterdayCodes.length;
     const wonCodesCount = yesterdayCodes.length;
-    const totalOdds = yesterdayCodes.reduce((sum, c) => sum + Number(c.odds || 0), 0);
-    const profit1000 = totalOdds * 1000;
-    return { totalCodes, wonCodesCount, totalOdds, profit1000 };
+    const totalOdds = yesterdayCodes.reduce((sum, code) => sum + Number(code.odds || 0), 0);
+    return {
+      totalCodes,
+      wonCodesCount,
+      totalOdds,
+      bigAmount: Math.round(totalOdds * 1000),
+    };
   }, [yesterdayCodes]);
 
-  const last30Stats = useMemo(() => {
-    const totalCodes = last30Codes.length;
-    const wonCodesCount = last30Codes.length;
-    const totalOdds = last30Codes.reduce((sum, c) => sum + Number(c.odds || 0), 0);
-    const profit1000 = totalOdds * 1000;
-    return { totalCodes, wonCodesCount, totalOdds, profit1000 };
-  }, [last30Codes]);
-
   return (
-    <div className="space-y-6 sm:space-y-8" dir="rtl" style={{ fontFamily: "'Cairo', 'Tajawal', sans-serif" }}>
-      <section className="relative overflow-hidden rounded-3xl border border-yellow-500/20 bg-gradient-to-br from-[#050a05] via-[#061106] to-[#090f09] px-3 py-7 sm:px-4 sm:py-8 md:p-10 text-center">
-        <div className="mb-4 sm:mb-5">
-          <div className="inline-flex items-center justify-center rounded-full border border-yellow-500/30 bg-yellow-500/10 px-5 py-2.5 sm:px-6 sm:py-3 text-[16px] sm:text-[20px] md:text-xl font-black text-yellow-300">
-            🏆 الأكواد الرابحة
-          </div>
-        </div>
-
-        <h1 className="text-[26px] sm:text-[34px] md:text-5xl font-black leading-[1.15] text-white">
-          سجل <span className="text-green-400 drop-shadow-[0_0_18px_rgba(34,197,94,0.8)]">الانتصارات</span> 🎯
-        </h1>
-
-        <div className="mt-4 sm:mt-5 flex items-center justify-center gap-2 sm:gap-3">
-          <div className="h-px w-10 sm:w-14 md:w-24 bg-green-700/80" />
-          <p className="text-[13px] sm:text-[16px] md:text-[18px] font-bold text-green-300">⚽ احصائيات الأكواد الرابحة ⚽</p>
-          <div className="h-px w-10 sm:w-14 md:w-24 bg-green-700/80" />
-        </div>
-      </section>
-
-      {yesterdayCodes.length > 0 && previousWinningDay && (
-        <StatsCard
-          title="📅 إحصائيات أكواد امبارح"
-          dayLabel={formatDateArabic(previousWinningDay)}
-          bigAmount={yesterdayStats.profit1000}
-          totalCodes={yesterdayStats.totalCodes}
-          wonCodesCount={yesterdayStats.wonCodesCount}
-          totalOdds={yesterdayStats.totalOdds}
-        />
-      )}
-
+    <div className="space-y-5 sm:space-y-6 md:space-y-8" dir="rtl" style={{ fontFamily: "'Cairo', 'Tajawal', sans-serif" }}>
       <StatsCard
-        title="📊 إحصائيات آخر 30 يوم"
-        bigAmount={last30Stats.profit1000}
+        title="إحصائيات آخر 30 يوم"
+        bigAmount={last30Stats.bigAmount}
         totalCodes={last30Stats.totalCodes}
         wonCodesCount={last30Stats.wonCodesCount}
         totalOdds={last30Stats.totalOdds}
       />
 
-      <section className="rounded-[20px] sm:rounded-[24px] md:rounded-[28px] border border-yellow-500/25 bg-gradient-to-br from-yellow-500/10 to-yellow-700/10 px-3 py-4 sm:px-4 sm:py-5 md:px-6 md:py-7 text-center shadow-[0_0_32px_rgba(234,179,8,0.12)]">
-        <h2 className="text-[18px] sm:text-[22px] md:text-[28px] font-black leading-[1.8] md:leading-relaxed text-white">
-          🔥 انتهز الفرصة الآن واستخدم أكوادنا المضمونة
-        </h2>
+      {previousWinningDay && (
+        <StatsCard
+          title="إحصائيات آخر يوم مغلق"
+          dayLabel={formatDateArabic(previousWinningDay)}
+          bigAmount={previousDayStats.bigAmount}
+          totalCodes={previousDayStats.totalCodes}
+          wonCodesCount={previousDayStats.wonCodesCount}
+          totalOdds={previousDayStats.totalOdds}
+        />
+      )}
 
-        <p className="mx-auto mt-5 sm:mt-6 max-w-3xl text-[15px] sm:text-[18px] md:text-[22px] leading-[1.9] text-gray-200">
-          حتى تكون أرباحك الشهر القادم مضاعفات رأس مالك وانت مطمئن 💪
-        </p>
-
-        <div className="mx-auto mt-6 sm:mt-7 max-w-3xl rounded-[18px] sm:rounded-[20px] md:rounded-[24px] border border-green-900/40 bg-black/35 p-3 sm:p-4 md:p-5 text-right">
-          <p className="text-[15px] sm:text-[17px] md:text-[20px] font-black leading-[1.9] text-white">🎲 عشان الأكواد تشتغل معاك لازم 🔤</p>
-          <p className="mt-3 sm:mt-4 text-[15px] sm:text-[17px] md:text-[20px] font-black leading-[2] text-white">
-            1️⃣ تستخدمها في تطبيق <span className="text-gray-200">MELBET</span>
-          </p>
-          <p className="mt-2 sm:mt-3 text-[15px] sm:text-[17px] md:text-[20px] font-black leading-[2] text-white">
-            2️⃣ وتكون مسجل ببروموكود <span className="text-yellow-400">A1VIP</span>
-          </p>
-
-          <div className="my-4 sm:my-5 h-px bg-green-900/40" />
-
-          <p className="text-[15px] sm:text-[17px] md:text-[20px] font-black leading-[1.9] text-white">🗓 وده شرح:</p>
-          <p className="mt-3 sm:mt-4 text-[15px] sm:text-[17px] md:text-[20px] leading-[2] text-gray-300">📌 طريقة تنزيل تطبيق MELBET</p>
-          <p className="mt-1 sm:mt-2 text-[15px] sm:text-[17px] md:text-[20px] leading-[2] text-gray-300">
-            📌 والتسجيل ببروموكود <span className="text-yellow-400 font-black">A1VIP</span> ⬇️
-          </p>
-        </div>
-
-        <a
-          href="https://t.me/WIN_20K/253"
-          target="_blank"
-          rel="noreferrer"
-          className="mt-7 sm:mt-8 inline-flex w-full max-w-3xl items-center justify-center rounded-[18px] sm:rounded-[20px] md:rounded-[24px] bg-yellow-500 px-3 py-4 sm:px-4 sm:py-5 text-[15px] sm:text-[17px] md:text-[20px] font-black text-black shadow-[0_0_26px_rgba(234,179,8,0.45)] transition-all hover:bg-yellow-400"
-        >
-          ← اضغط هنا للتحويل للشرح اضغط هنا
-        </a>
-      </section>
-
-      <section className="space-y-6 sm:space-y-8">
-        <div className="mx-auto w-full max-w-5xl rounded-[20px] sm:rounded-[24px] md:rounded-[28px] border border-yellow-400/55 bg-gradient-to-r from-yellow-500/18 via-yellow-400/16 to-yellow-500/18 px-4 py-5 sm:px-5 sm:py-7 text-center shadow-[0_0_34px_rgba(234,179,8,0.22)]">
-          <h2 className="text-[18px] sm:text-[22px] md:text-[28px] font-black leading-[1.6] text-yellow-300">
-            💸 إثبات كل الاكواد الرابحة 💸
-          </h2>
-          <p className="mt-2 sm:mt-4 text-[16px] sm:text-[20px] md:text-[28px] font-black leading-[1.5] text-yellow-200">⚽ لآخر 30 يوم ⚽</p>
+      <section className="rounded-[20px] sm:rounded-[24px] md:rounded-[28px] border border-green-900/50 bg-[radial-gradient(circle_at_top,#0d2210,#071107)] px-3 py-4 sm:px-4 sm:py-5 md:px-6 md:py-7 shadow-[0_0_32px_rgba(0,255,120,0.08)]">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-[18px] sm:text-[22px] md:text-[26px] font-black text-white">آخر الأكواد الرابحة</h2>
+            <p className="mt-1 text-[11px] sm:text-[12px] md:text-sm text-gray-400">حتى اليوم الحالي فقط وبدون أيام مستقبلية</p>
+          </div>
+          <div className="rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 text-[11px] sm:text-[12px] md:text-sm font-black text-green-400">
+            {loading ? '...' : `${wonCodes.length} كود`}
+          </div>
         </div>
 
         {loading ? (
-          <div className="rounded-3xl border border-green-900/40 bg-black/30 p-10 text-center text-2xl text-gray-400">
-            جاري التحميل...
-          </div>
-        ) : last30Codes.length === 0 ? (
-          <div className="rounded-3xl border border-green-900/40 bg-black/30 p-10 text-center text-2xl text-gray-400">
-            لا توجد إثباتات حتى الآن
-          </div>
+          <div className="rounded-2xl border border-green-900/30 bg-black/20 p-8 text-center text-gray-400">جاري تحميل الأكواد...</div>
+        ) : wonCodes.length === 0 ? (
+          <div className="rounded-2xl border border-green-900/30 bg-black/20 p-8 text-center text-gray-400">لا توجد أكواد رابحة خلال آخر 30 يوم حتى اليوم الحالي</div>
         ) : (
-          Object.entries(groupedCodes).map(([day, items]) => (
-            <div key={day} className="space-y-4 sm:space-y-6">
-              <div className="text-center">
-                <h3 className="text-[18px] sm:text-[22px] md:text-[28px] font-black text-white">{formatDateArabic(day)}</h3>
-                <p className="mt-1.5 sm:mt-2 text-[13px] sm:text-[15px] md:text-[18px] text-gray-400">{items.length} كود رابح</p>
-              </div>
-
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3 md:gap-4">
-                {items.map((code, idx) => (
-                  <ProofCard key={code.id} code={code} index={idx + 1} />
-                ))}
-              </div>
-            </div>
-          ))
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
+            {wonCodes.map((code, index) => (
+              <ProofCard key={code.id} code={code} index={index + 1} />
+            ))}
+          </div>
         )}
       </section>
     </div>
